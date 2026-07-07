@@ -24,6 +24,7 @@ from app.prompts import (
     SYSTEM_PROMPT_LITE,
     build_context_block,
     build_user_prompt,
+    clean_reply_citations,
 )
 from app.retrieval import (
     NAMED_PRODUCT_SLUGS,
@@ -304,6 +305,7 @@ class ChatService:
         return reply
 
     def _build_response(self, prepared: _Prepared, reply: str) -> ChatResponse:
+        reply = clean_reply_citations(reply)
         uncertain = prepared.mode == "fallback" or _looks_uncertain(reply)
         read_more = _pick_read_more(prepared.chunks, prepared.question, prepared.search_query)
         media = (

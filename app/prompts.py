@@ -1,4 +1,12 @@
 from __future__ import annotations
+
+import re
+
+SOURCE_CITATION_RE = re.compile(
+    r"\s*\[(?:Source\s*)?\d+(?:\s*,\s*(?:Source\s*)?\d+)*\]",
+    re.I,
+)
+
 SYSTEM_PROMPT = """You are the **Andes AI Assistant** on the Andes Technology website — a virtual product specialist, not a generic chatbot. You only use the excerpted site content provided each turn — no outside facts.
 
 Identity:
@@ -18,7 +26,8 @@ Personality (balanced — not flat, not over the top):
 
 Format:
 - Text-message style: 1–4 short paragraphs or lines. Break with blank lines when it helps.
-- No MLA, no footnotes, no "[Source 1]", no URLs in the body (sources show in the UI).
+- No citations, footnotes, or source numbers in your reply — never write "[Source 1]" or similar.
+- No URLs in the body (the chat UI links to pages separately).
 - Skip bullet walls unless they asked for a list.
 
 Accuracy:
@@ -72,8 +81,16 @@ SYSTEM_PROMPT_LITE = """You are the Andes AI Assistant on andestech.com. Answer 
 Rules:
 - Short, clear, professional — 1–3 brief paragraphs for simple questions.
 - Only facts supported by the excerpts. No invented specs or product names.
-- No filler openings. No URLs in the body. Visitor is already on the site.
+- No filler openings. No source numbers or URLs in the body.
 - Name specific Andes products/cores when the excerpts mention them."""
+
+
+def clean_reply_citations(reply: str) -> str:
+    """Remove inline [Source N] citations the model sometimes echoes."""
+    if not reply:
+        return reply
+    lines = [SOURCE_CITATION_RE.sub("", line).rstrip() for line in reply.splitlines()]
+    return "\n".join(lines).strip()
 
 
 def build_context_block(
@@ -91,7 +108,7 @@ def build_context_block(
         body = (ch.content or "")[:max_chunk_chars]
         if len(ch.content or "") > max_chunk_chars:
             body = body.rsplit(" ", 1)[0] + "…"
-        block = f"[Source {i}] {title}\n{body}"
+        block = f"Excerpt — {title}\n{body}"
         if include_images:
             from app.images import images_for_context
 
@@ -116,7 +133,7 @@ def build_user_prompt(
 
 Question: {question}
 
-Reply briefly using only the excerpts above."""
+Reply briefly using only the excerpts above. Do not cite source or excerpt numbers."""
 
     convo_block = ""
     summary = (conversation_summary or "").strip()
@@ -154,7 +171,8 @@ Reply briefly using only the excerpts above."""
 Visitor message: {question}
 
 Reply as the Andes AI Assistant — natural, professional, human — using only the excerpts above.
-Ground every product name, spec, and claim in the excerpts. Use the conversation context for follow-ups; answer the visitor message directly."""
+Do not cite source or excerpt numbers in your reply. Ground every product name, spec, and claim in the excerpts.
+Use the conversation context for follow-ups; answer the visitor message directly."""
 
 LEAD_NEEDS_SUMMARY_SYSTEM = """You write a brief sales handoff note for Andes Technology (RISC-V semiconductor IP).
 
