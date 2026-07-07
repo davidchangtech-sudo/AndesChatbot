@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     crawl_wordfence_cooldown: float = 120.0
     rag_top_k: int = 4
     rag_min_similarity: float = 0.42
+    enable_gemini_fallback: bool = True
+    rag_fallback_max_similarity: float = 0.56
 
     cron_secret: str
     lead_admin_secret: str | None = None

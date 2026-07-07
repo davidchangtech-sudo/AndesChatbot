@@ -6,6 +6,15 @@ from typing import Iterator
 from app.chat_tuning import PromptProfile, prompt_profile
 from app.config import Settings
 from app.conversation_summary import update_conversation_summary
+from app.fallback_chat import (
+    FALLBACK_SYSTEM_PROMPT,
+    NO_ANSWER_REPLY,
+    OUT_OF_SCOPE_REPLY,
+    build_fallback_user_prompt,
+    classify_andes_relevance,
+    filter_fallback_reply,
+    should_use_fallback,
+)
 from app.gemini_client import GeminiClient
 from app.models import ChatMessage, ChatRequest, ChatResponse, ReadMoreLink
 from app.offline_faq import instant_reply, offline_keyword_reply
@@ -56,6 +65,7 @@ class _Prepared:
     prior_summary: str | None
     history: list[ChatMessage]
     profile: PromptProfile
+    mode: str = "rag"  # rag | fallback
 
 
 class ChatService:
@@ -123,17 +133,24 @@ class ChatService:
             )[: profile.chunk_count]
 
         if not chunks:
-            return ChatResponse(
-                reply=(
-                    "I don't have a reliable answer for that in our current materials.\n\n"
-                    "Try rephrasing your question, or use Book a meeting and our team will follow up."
-                ),
-                sources=[],
-                read_more=_fallback_read_more(question),
-                suggest_lead_form=suggest_lead,
-                show_lead_cta=False,
-                uncertain=True,
-                conversation_summary=req.conversation_summary,
+            return self._no_kb_response(req, question, suggest_lead)
+
+        use_fallback = (
+            self.settings.enable_gemini_fallback
+            and should_use_fallback(chunks, max_similarity=self.settings.rag_fallback_max_similarity)
+        )
+
+        if use_fallback:
+            return self._prepare_fallback(
+                req,
+                question=question,
+                suggest_lead=suggest_lead,
+                search_query=search_query,
+                chunks=chunks,
+                profile=profile,
+                weak_context=build_context_block(chunks[:2], 500, include_images=False)
+                if chunks
+                else "",
             )
 
         context = build_context_block(
@@ -159,11 +176,135 @@ class ChatService:
             profile=profile,
         )
 
-    def _system_prompt(self, profile: PromptProfile) -> str:
-        return SYSTEM_PROMPT_LITE if profile.use_lite_prompt else SYSTEM_PROMPT
+    def _prepare_fallback(
+        self,
+        req: ChatRequest,
+        *,
+        question: str,
+        suggest_lead: bool,
+        search_query: str,
+        chunks: list,
+        profile: PromptProfile,
+        weak_context: str = "",
+    ) -> ChatResponse | _Prepared:
+        if not self.settings.enable_gemini_fallback:
+            return ChatResponse(
+                reply=NO_ANSWER_REPLY,
+                sources=[],
+                read_more=_fallback_read_more(question),
+                suggest_lead_form=suggest_lead,
+                show_lead_cta=False,
+                uncertain=True,
+                conversation_summary=req.conversation_summary,
+            )
+
+        relevance = classify_andes_relevance(
+            self.gemini,
+            question,
+            history=req.history,
+            conversation_summary=req.conversation_summary,
+        )
+        if relevance != "related":
+            return ChatResponse(
+                reply=OUT_OF_SCOPE_REPLY,
+                sources=[],
+                read_more=_fallback_read_more(question),
+                suggest_lead_form=suggest_lead,
+                show_lead_cta=False,
+                uncertain=True,
+                conversation_summary=req.conversation_summary,
+            )
+
+        return _Prepared(
+            question=question,
+            user_prompt=build_fallback_user_prompt(
+                question,
+                history=req.history,
+                conversation_summary=req.conversation_summary,
+                weak_context=weak_context,
+            ),
+            search_query=search_query,
+            chunks=chunks,
+            suggest_lead=suggest_lead,
+            prior_summary=req.conversation_summary,
+            history=req.history,
+            profile=profile,
+            mode="fallback",
+        )
+
+    def _no_kb_response(
+        self, req: ChatRequest, question: str, suggest_lead: bool
+    ) -> ChatResponse | _Prepared:
+        profile = prompt_profile(
+            question,
+            history_len=len(req.history),
+            has_summary=bool((req.conversation_summary or "").strip()),
+        )
+        return self._prepare_fallback(
+            req,
+            question=question,
+            suggest_lead=suggest_lead,
+            search_query=question,
+            chunks=[],
+            profile=profile,
+        )
+
+    def _system_prompt(self, prepared: _Prepared) -> str:
+        if prepared.mode == "fallback":
+            return FALLBACK_SYSTEM_PROMPT
+        return SYSTEM_PROMPT_LITE if prepared.profile.use_lite_prompt else SYSTEM_PROMPT
+
+    def _fallback_regenerate(self, prepared: _Prepared) -> str:
+        relevance = classify_andes_relevance(
+            self.gemini,
+            prepared.question,
+            history=prepared.history,
+            conversation_summary=prepared.prior_summary,
+        )
+        if relevance != "related":
+            return OUT_OF_SCOPE_REPLY
+
+        weak = ""
+        if prepared.chunks:
+            weak = build_context_block(prepared.chunks[:2], 600, include_images=False)
+        fb_prompt = build_fallback_user_prompt(
+            prepared.question,
+            history=prepared.history,
+            conversation_summary=prepared.prior_summary,
+            weak_context=weak,
+        )
+        reply = self.gemini.generate_answer(
+            FALLBACK_SYSTEM_PROMPT,
+            fb_prompt,
+            max_output_tokens=512,
+        )
+        return filter_fallback_reply(reply)
+
+    def _generate_reply(self, prepared: _Prepared) -> str:
+        max_tokens = 512 if prepared.mode == "fallback" else prepared.profile.max_output_tokens
+        reply = self.gemini.generate_answer(
+            self._system_prompt(prepared),
+            prepared.user_prompt,
+            max_output_tokens=max_tokens,
+        )
+        if prepared.mode == "fallback":
+            return filter_fallback_reply(reply)
+        if self.settings.enable_gemini_fallback and _looks_uncertain(reply):
+            return self._fallback_regenerate(prepared)
+        return reply
+
+    def _finalize_reply(self, prepared: _Prepared, reply: str) -> str:
+        reply = reply.strip()
+        if not reply:
+            return NO_ANSWER_REPLY
+        if prepared.mode == "fallback":
+            return filter_fallback_reply(reply)
+        if self.settings.enable_gemini_fallback and _looks_uncertain(reply):
+            return self._fallback_regenerate(prepared)
+        return reply
 
     def _build_response(self, prepared: _Prepared, reply: str) -> ChatResponse:
-        uncertain = _looks_uncertain(reply)
+        uncertain = prepared.mode == "fallback" or _looks_uncertain(reply)
         read_more = _pick_read_more(prepared.chunks, prepared.question, prepared.search_query)
         media = (
             pick_media(prepared.chunks, prepared.question, prepared.search_query)
@@ -195,11 +336,7 @@ class ChatService:
         prepared = self._prepare(req)
         if isinstance(prepared, ChatResponse):
             return prepared
-        reply = self.gemini.generate_answer(
-            self._system_prompt(prepared.profile),
-            prepared.user_prompt,
-            max_output_tokens=prepared.profile.max_output_tokens,
-        )
+        reply = self._generate_reply(prepared)
         return self._build_response(prepared, reply)
 
     def stream(self, req: ChatRequest) -> Iterator[dict]:
@@ -208,23 +345,24 @@ class ChatService:
             yield {"type": "done", **prepared.model_dump(mode="json")}
             return
 
+        max_tokens = 512 if prepared.mode == "fallback" else prepared.profile.max_output_tokens
         parts: list[str] = []
         for token in self.gemini.stream_answer(
-            self._system_prompt(prepared.profile),
+            self._system_prompt(prepared),
             prepared.user_prompt,
-            max_output_tokens=prepared.profile.max_output_tokens,
+            max_output_tokens=max_tokens,
         ):
             parts.append(token)
             yield {"type": "token", "text": token}
 
-        reply = "".join(parts).strip()
-        if not reply:
-            reply = "I couldn't generate a response. Please try again."
+        reply = self._finalize_reply(prepared, "".join(parts))
         resp = self._build_response(prepared, reply)
         yield {"type": "done", **resp.model_dump(mode="json")}
 
 
 def _pick_read_more(chunks, question: str, search_query: str | None = None) -> ReadMoreLink | None:
+    if not chunks:
+        return _fallback_read_more(question)
     q = (search_query or question).strip().lower()
     if len(q) < READ_MORE_MIN_QUESTION_CHARS and len(question.strip()) < READ_MORE_MIN_QUESTION_CHARS:
         return None

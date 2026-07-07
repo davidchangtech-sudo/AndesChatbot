@@ -121,6 +121,34 @@ class GeminiClient:
             delay=GEMINI_CHAT_RETRY_DELAY_SECONDS,
         )
 
+    def classify_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_output_tokens: int = 16,
+    ) -> str:
+        def call():
+            response = self._client.models.generate_content(
+                model=self.settings.gemini_chat_model,
+                contents=[types.Content(role="user", parts=[types.Part(text=user_prompt)])],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.0,
+                    max_output_tokens=max_output_tokens,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
+            )
+            if not response.text:
+                raise RuntimeError("Gemini returned empty classification")
+            return response.text.strip()
+
+        return self._retry(
+            call,
+            max_attempts=GEMINI_CHAT_MAX_ATTEMPTS,
+            delay=GEMINI_CHAT_RETRY_DELAY_SECONDS,
+        )
+
     def stream_answer(
         self,
         system_prompt: str,
