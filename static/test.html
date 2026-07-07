@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Andes Technology — RISC-V Processors</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #333;
+      background: #fff;
+    }
+    a { color: #00709e; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+      background: #fff;
+      border-bottom: 1px solid #e6e6e6;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .site-header img { height: 36px; width: auto; }
+    .site-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .site-nav a { color: #333; }
+    .site-nav a:hover { color: #00709e; text-decoration: none; }
+
+    .hero {
+      position: relative;
+      min-height: 380px;
+      display: flex;
+      align-items: center;
+      background: linear-gradient(120deg, #004561 0%, #00709e 45%, #0a8bb8 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(255,255,255,.08) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      width: 100%;
+    }
+    .hero h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 520px;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      opacity: 0.92;
+    }
+    .hero-cta {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.65rem 1.4rem;
+      background: #fff;
+      color: #00709e;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-radius: 4px;
+    }
+    .hero-cta:hover { background: #e8f4f8; text-decoration: none; }
+
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    .section h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.5rem;
+      color: #00709e;
+      font-weight: 700;
+    }
+    .section .lead {
+      margin: 0 0 2rem;
+      color: #666;
+      line-height: 1.5;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+    .card {
+      border: 1px solid #e6e6e6;
+      border-radius: 6px;
+      padding: 1.25rem;
+      background: #fafbfc;
+      transition: box-shadow 0.2s ease;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,70,97,.1); }
+    .card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: #004561;
+    }
+    .card p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: #555;
+      line-height: 1.45;
+    }
+
+    .strip {
+      background: #f4f8fa;
+      border-top: 1px solid #e6e6e6;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .site-footer {
+      background: #004561;
+      color: rgba(255,255,255,.85);
+      padding: 2rem;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .site-footer a { color: #b8ecfa; }
+
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="https://www.andestech.com/en/"><img src="/static/assets/andes-logo.png" alt="Andes Technology" /></a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="https://www.andestech.com/en/products-solutions/">Products</a>
+      <a href="https://www.andestech.com/en/markets-overview/">Markets</a>
+      <a href="https://www.andestech.com/en/about/">About</a>
+      <a href="https://www.andestech.com/en/support/">Support</a>
+      <a href="https://www.andestech.com/en/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>RISC-V Processors for the Embedded Market</h1>
+      <p>Andes Technology provides 32/64-bit embedded CPU cores and platform solutions for AI, automotive, IoT, networking, and more.</p>
+      <a class="hero-cta" href="https://www.andestech.com/en/products-solutions/andescore-processors/">Explore AndesCore</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Products &amp; Solutions</h2>
+    <p class="lead">Complete platform IP — processors, tools, and software for your next SoC.</p>
+    <div class="cards">
+      <article class="card">
+        <h3>AndesCore Processors</h3>
+        <p>Licensable RISC-V CPU cores from entry-level to high performance, with vector and FuSa options.</p>
+      </article>
+      <article class="card">
+        <h3>AndeSight IDE</h3>
+        <p>Development tools and software packages to accelerate your embedded design cycle.</p>
+      </article>
+      <article class="card">
+        <h3>AndesAIRE</h3>
+        <p>Edge AI solutions integrated with Andes processor platforms for efficient inference.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section strip">
+    <h2>Markets</h2>
+    <p class="lead">Serving AI, automotive, IoT, 5G, storage, wearables, and consumer applications worldwide.</p>
+    <div class="cards">
+      <article class="card">
+        <h3>Artificial Intelligence</h3>
+        <p>Low-latency, power-efficient inference at the edge.</p>
+      </article>
+      <article class="card">
+        <h3>Automotive</h3>
+        <p>RISC-V IP aligned with functional safety requirements.</p>
+      </article>
+      <article class="card">
+        <h3>IoT</h3>
+        <p>Scalable cores for sensors, gateways, and smart devices.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p>&copy; Andes Technology Corporation · <a href="https://www.andestech.com/en/contact/">Contact</a> · Local demo page for chatbot widget testing</p>
+    <p id="kb-banner" style="margin-top:0.5rem;font-size:0.85rem;color:#00709e">Loading knowledge base…</p>
+  </footer>
+
+  <script>
+    fetch("/health").then(r => r.json()).then(d => {
+      const el = document.getElementById("kb-banner");
+      if (el) el.textContent = `RAG active: ${d.kb_chunks} chunks from ${d.kb_urls} pages (${d.kb_mode})`;
+    }).catch(() => {});
+    window.ANDES_CHAT_CONFIG = {
+      apiUrl: window.location.origin,
+      launcherTooltip: "Chat with the Andes AI Assistant",
+    };
+  </script>
+  <p style="text-align:center;font-size:0.8rem;color:#777;margin:1rem 2rem 5rem">Full site RAG — answers grounded in crawled andestech.com/en/ content.</p>
+  <script src="/widget.js?v=61"></script>
+</body>
+</html>

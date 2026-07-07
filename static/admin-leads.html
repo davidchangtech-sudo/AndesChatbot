@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Andes Chat — Sales leads</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #f4f8fa;
+      color: #333;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      background: linear-gradient(135deg, #00709e, #004561);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; }
+    header p { margin: 0.35rem 0 0; font-size: 0.9rem; opacity: 0.9; }
+    main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+    .auth {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .auth label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.35rem; }
+    .auth input {
+      width: 100%;
+      max-width: 420px;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .auth button, .tab-btn, .status-btn {
+      background: #00709e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .auth button { margin-top: 0.75rem; }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: #fff;
+      color: #004561;
+      border: 1px solid #cce3ed;
+    }
+    .tab-btn.active {
+      background: #00709e;
+      color: #fff;
+      border-color: #00709e;
+    }
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-new { background: #2e7d32; }
+    .dot-emailed { background: #f9a825; }
+    .dot-finished { background: #9e9e9e; }
+    .lead-card {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border-left: 5px solid #2e7d32;
+    }
+    .lead-card.status-emailed { border-left-color: #f9a825; }
+    .lead-card.status-finished { border-left-color: #9e9e9e; opacity: 0.85; }
+    .lead-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .lead-head h2 { margin: 0; font-size: 1.1rem; color: #004561; }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-new { background: #e8f5e9; color: #2e7d32; }
+    .badge-emailed { background: #fff8e1; color: #f57f17; }
+    .badge-finished { background: #f5f5f5; color: #616161; }
+    .meta { font-size: 0.85rem; color: #777; margin-bottom: 1rem; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: #f8fafb;
+      border-radius: 8px;
+    }
+    .status-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      background: #fff;
+      color: #004561;
+      border: 1px solid #cce3ed;
+    }
+    .status-btn.active-new { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .status-btn.active-emailed { background: #fff8e1; border-color: #f9a825; color: #f57f17; }
+    .status-btn.active-finished { background: #f5f5f5; border-color: #9e9e9e; color: #616161; }
+    .done-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: #555;
+      margin-left: auto;
+      cursor: pointer;
+      user-select: none;
+    }
+    .done-label input { width: 1rem; height: 1rem; cursor: pointer; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .field label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #888; }
+    .field span { display: block; font-size: 0.95rem; margin-top: 0.15rem; }
+    .summary {
+      background: #f8fafb;
+      border: 1px solid #e6e6e6;
+      border-radius: 8px;
+      padding: 1rem;
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .summary h3 { margin: 0 0 0.5rem; font-size: 0.8rem; text-transform: uppercase; color: #00709e; }
+    .empty { color: #777; text-align: center; padding: 2rem; }
+    .err { color: #b00020; font-size: 0.9rem; margin-top: 0.5rem; }
+    .toolbar { display: none; }
+    .toolbar.show { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Andes chatbot — sales leads</h1>
+    <p>Book a meeting requests — mark status as you follow up.</p>
+  </header>
+  <main>
+    <div class="auth" id="auth-box">
+      <label for="secret">Admin password</label>
+      <input type="password" id="secret" autocomplete="off" />
+      <button type="button" id="load-btn">Load leads</button>
+      <p class="err" id="auth-err" hidden></p>
+    </div>
+    <div class="toolbar" id="toolbar">
+      <div class="tabs">
+        <button type="button" class="tab-btn active" data-tab="active">Active</button>
+        <button type="button" class="tab-btn" data-tab="archived">Archived</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot dot-new"></i> New</span>
+        <span><i class="dot dot-emailed"></i> Emailed</span>
+        <span><i class="dot dot-finished"></i> Finished</span>
+      </div>
+    </div>
+    <div id="leads-list"></div>
+  </main>
+  <script>
+    var apiUrl = window.location.origin;
+    var secretInput = document.getElementById("secret");
+    var listEl = document.getElementById("leads-list");
+    var errEl = document.getElementById("auth-err");
+    var toolbar = document.getElementById("toolbar");
+    var currentTab = "active";
+    var allLeads = [];
+
+    var saved = sessionStorage.getItem("andes_lead_admin_secret");
+    if (saved) {
+      secretInput.value = saved;
+      loadLeads();
+    }
+
+    function secret() {
+      return secretInput.value.trim();
+    }
+
+    function esc(s) {
+      var d = document.createElement("div");
+      d.textContent = s == null ? "" : String(s);
+      return d.innerHTML;
+    }
+
+    function safeLink(url) {
+      if (!url || !/^https?:\/\//i.test(String(url))) return "—";
+      var u = esc(url);
+      return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + "</a>";
+    }
+
+    function statusLabel(st) {
+      if (st === "emailed") return "Emailed";
+      if (st === "finished") return "Finished";
+      return "New";
+    }
+
+    function badgeClass(st) {
+      if (st === "emailed") return "badge-emailed";
+      if (st === "finished") return "badge-finished";
+      return "badge-new";
+    }
+
+    function cardClass(st) {
+      if (st === "emailed") return "status-emailed";
+      if (st === "finished") return "status-finished";
+      return "status-new";
+    }
+
+    function btnClass(st, active) {
+      if (!active) return "";
+      if (st === "emailed") return "active-emailed";
+      if (st === "finished") return "active-finished";
+      return "active-new";
+    }
+
+    function setStatus(leadId, status) {
+      var sec = secret();
+      if (!sec) return;
+      fetch(apiUrl + "/admin/leads/" + encodeURIComponent(leadId), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Lead-Admin-Secret": sec,
+        },
+        body: JSON.stringify({ status: status }),
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Update failed");
+            return d;
+          });
+        })
+        .then(function (updated) {
+          allLeads = allLeads.map(function (l) {
+            return l.id === updated.id ? updated : l;
+          });
+          renderLeads(filterLeads());
+        })
+        .catch(function (e) {
+          errEl.textContent = e.message || "Failed to update";
+          errEl.hidden = false;
+        });
+    }
+
+    function filterLeads() {
+      if (currentTab === "archived") {
+        return allLeads.filter(function (l) {
+          return l.status === "finished";
+        });
+      }
+      return allLeads.filter(function (l) {
+        return l.status === "new" || l.status === "emailed";
+      });
+    }
+
+    function renderLeads(leads) {
+      if (!leads.length) {
+        listEl.innerHTML =
+          '<p class="empty">' +
+          (currentTab === "archived" ? "No archived leads." : "No active leads.") +
+          "</p>";
+        return;
+      }
+      listEl.innerHTML = leads
+        .map(function (l) {
+          var st = l.status || "new";
+          return (
+            '<article class="lead-card ' +
+            cardClass(st) +
+            '" data-id="' +
+            esc(l.id) +
+            '">' +
+            '<div class="lead-head">' +
+            "<div><h2>" +
+            esc(l.name) +
+            '</h2><span class="badge ' +
+            badgeClass(st) +
+            '">' +
+            statusLabel(st) +
+            "</span></div></div>" +
+            '<p class="meta">' +
+            esc(l.created_at || "") +
+            (l.session_id ? " · session " + esc(l.session_id) : "") +
+            "</p>" +
+            '<div class="actions">' +
+            '<button type="button" class="status-btn ' +
+            btnClass("new", st === "new") +
+            '" data-status="new" data-id="' +
+            esc(l.id) +
+            '">New</button>' +
+            '<button type="button" class="status-btn ' +
+            btnClass("emailed", st === "emailed") +
+            '" data-status="emailed" data-id="' +
+            esc(l.id) +
+            '">Emailed</button>' +
+            '<label class="done-label"><input type="checkbox" class="done-check" data-id="' +
+            esc(l.id) +
+            '" ' +
+            (st === "finished" ? "checked" : "") +
+            ' /> Mark finished</label>' +
+            "</div>" +
+            '<div class="grid">' +
+            '<div class="field"><label>Email</label><span>' +
+            esc(l.email) +
+            "</span></div>" +
+            '<div class="field"><label>Company</label><span>' +
+            esc(l.company || "—") +
+            "</span></div>" +
+            '<div class="field"><label>Phone</label><span>' +
+            esc(l.phone || "—") +
+            "</span></div>" +
+            '<div class="field"><label>Interest</label><span>' +
+            esc(l.topic || "—") +
+            "</span></div>" +
+            '<div class="field"><label>Page</label><span>' +
+            safeLink(l.source_url) +
+            "</span></div>" +
+            "</div>" +
+            '<div class="field" style="margin-bottom:1rem"><label>Message</label><span>' +
+            esc(l.message) +
+            "</span></div>" +
+            '<div class="summary"><h3>Visitor needs</h3>' +
+            esc(l.chat_summary || "No summary") +
+            "</div></article>"
+          );
+        })
+        .join("");
+
+      listEl.querySelectorAll(".status-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          setStatus(btn.getAttribute("data-id"), btn.getAttribute("data-status"));
+        });
+      });
+      listEl.querySelectorAll(".done-check").forEach(function (cb) {
+        cb.addEventListener("change", function () {
+          var id = cb.getAttribute("data-id");
+          setStatus(id, cb.checked ? "finished" : "new");
+        });
+      });
+    }
+
+    function loadLeads() {
+      var sec = secret();
+      errEl.hidden = true;
+      if (!sec) {
+        errEl.textContent = "Enter the admin password.";
+        errEl.hidden = false;
+        return;
+      }
+      sessionStorage.setItem("andes_lead_admin_secret", sec);
+      listEl.innerHTML = '<p class="empty">Loading…</p>';
+      fetch(apiUrl + "/admin/leads?limit=200&tab=all", {
+        headers: { "X-Lead-Admin-Secret": sec },
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Unauthorized");
+            return d;
+          });
+        })
+        .then(function (leads) {
+          allLeads = leads;
+          toolbar.classList.add("show");
+          renderLeads(filterLeads());
+        })
+        .catch(function (e) {
+          errEl.textContent = e.message || "Failed to load leads";
+          errEl.hidden = false;
+          listEl.innerHTML = "";
+        });
+    }
+
+    document.getElementById("load-btn").addEventListener("click", loadLeads);
+
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".tab-btn").forEach(function (b) {
+          b.classList.remove("active");
+        });
+        btn.classList.add("active");
+        currentTab = btn.getAttribute("data-tab");
+        renderLeads(filterLeads());
+      });
+    });
+  </script>
+</body>
+</html>

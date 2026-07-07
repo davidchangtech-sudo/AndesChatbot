@@ -1,0 +1,40 @@
+ANDES CHATBOT — quick start
+===========================
+
+1) unzip
+   chmod +x start.sh && ./start.sh
+   paste GOOGLE_API_KEY when asked (sent separately, not in zip)
+
+2) edit .env.staging before or after start:
+   ALLOWED_ORIGINS = your WordPress URL (exact, no trailing slash)
+   then: docker compose -f docker-compose.staging.yml up -d
+
+3) nginx + SSL
+   chatbot-staging.andestech.com → 127.0.0.1:8001
+   copy nginx-chatbot-staging.conf
+   SSL: certbot, or Cloudflare orange cloud on DNS
+
+4) WordPress
+   upload andes-ai-chatbot.zip
+   Settings → Andes AI Chatbot
+   API URL: https://chatbot-staging.andestech.com
+   clear cache → bubble bottom-right on homepage
+
+--------------------------------
+test   curl http://127.0.0.1:8001/health
+admin  https://chatbot-staging.andestech.com/admin
+pass   Andes11!
+prod   ./start.sh prod (after UAT)
+--------------------------------
+
+if plugin not allowed — paste in WP footer:
+
+<script>
+  window.ANDES_CHAT_CONFIG = {
+    apiUrl: "https://chatbot-staging.andestech.com",
+    launcherTooltip: "Chat with the Andes AI Assistant"
+  };
+</script>
+<script src="https://chatbot-staging.andestech.com/widget.js"></script>
+
+server min: 2 CPU, 4 GB RAM, Ubuntu, Docker

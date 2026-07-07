@@ -1,0 +1,2 @@
+# Place rag.db here before building the Docker image (handoff package).
+# scripts/prepare-handoff.sh copies from data/rag.db automatically.

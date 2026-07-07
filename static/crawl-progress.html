@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
+  <title>Andes RAG Crawl Progress</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      width: min(520px, 100%);
+      background: #1e293b; border-radius: 16px;
+      padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    h1 { margin: 0 0 6px; font-size: 1.35rem; font-weight: 600; }
+    .sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
+    .bar-wrap {
+      height: 22px; background: #334155; border-radius: 999px;
+      overflow: hidden; margin: 16px 0 10px;
+    }
+    .bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #00709e, #38bdf8);
+      border-radius: 999px; transition: width 0.2s linear;
+    }
+    .pct { font-size: 2rem; font-weight: 700; color: #38bdf8; }
+    .live { font-size: 0.75rem; color: #22d3ee; margin-left: 8px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+    .stat { background: #0f172a; border-radius: 10px; padding: 12px 14px; }
+    .stat label { display: block; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .stat span { font-size: 1.1rem; font-weight: 600; }
+    .url { margin-top: 16px; font-size: 0.78rem; color: #64748b; word-break: break-all; line-height: 1.4; }
+    .status {
+      display: inline-block; padding: 4px 10px; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    }
+    .status.running { background: #164e63; color: #67e8f9; }
+    .status.done { background: #14532d; color: #86efac; }
+    .status.failed { background: #450a0a; color: #fca5a5; }
+    .status.idle { background: #334155; color: #94a3b8; }
+    .pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Andes website crawl <span class="live" id="live">● live</span></h1>
+    <p class="sub">Building full RAG from andestech.com/en/</p>
+    <span id="status" class="status idle">idle</span>
+    <div class="pct"><span id="pct">0</span>%</div>
+    <div class="bar-wrap"><div id="bar" class="bar"></div></div>
+    <p id="msg" class="sub" style="margin:0">Connecting…</p>
+    <div class="stats">
+      <div class="stat"><label>Pages</label><span id="pages">0 / 0</span></div>
+      <div class="stat"><label>Chunks in KB</label><span id="chunks">0</span></div>
+      <div class="stat"><label>URLs in KB</label><span id="urls">0</span></div>
+      <div class="stat"><label>Live tick</label><span id="tick">—</span></div>
+    </div>
+    <p id="cur" class="url"></p>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id);
+    function render(d) {
+      const pct = d.percent || 0;
+      $('bar').style.width = pct + '%';
+      $('pct').textContent = pct;
+      const st = d.status || 'idle';
+      $('status').textContent = st;
+      $('status').className = 'status ' + st + (st === 'running' ? ' pulse' : '');
+      $('msg').textContent = d.message || '';
+      $('pages').textContent = (d.pages_indexed || 0) + ' / ' + (d.total_urls || 0);
+      $('chunks').textContent = d.kb_chunks ?? d.chunks_stored ?? 0;
+      $('urls').textContent = d.kb_urls ?? '—';
+      $('tick').textContent = new Date().toLocaleTimeString();
+      $('cur').textContent = d.current_url ? 'Current: ' + d.current_url : '';
+      $('live').style.color = st === 'running' ? '#22d3ee' : '#64748b';
+    }
+    const es = new EventSource('/api/crawl-progress/stream');
+    es.onmessage = e => { try { render(JSON.parse(e.data)); } catch (_) {} };
+    es.onerror = () => {
+      $('msg').textContent = 'Reconnecting…';
+      $('live').style.color = '#f87171';
+    };
+  </script>
+</body>
+</html>

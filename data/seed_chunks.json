@@ -1,0 +1,172 @@
+[
+  {
+    "url": "https://www.andestech.com/en/",
+    "title": "Andes Technology — Company Overview",
+    "content": "Andes Technology Corporation is a leading embedded processor IP supplier headquartered in Hsinchu, Taiwan. Andes specializes in high-performance, low-power 32-bit and 64-bit RISC-V processor cores and complete SoC platform solutions. Founded in the RISC-V era as a long-standing CPU IP vendor, Andes serves fabless semiconductor companies, system houses, and OEMs worldwide. Core offerings include AndesCore licensable CPUs, AndeStar architecture, AndeSight development tools, AndeSoft software, Andes Custom Extension (ACE), Andes Trace debug/trace, AndeShape platform IP, and AndesAIRE edge AI solutions. Typical applications span AI inference at the edge, automotive embedded control, IoT, networking, 5G infrastructure, storage controllers, wearables, and consumer electronics."
+  },
+  {
+    "url": "https://www.andestech.com/en/about/",
+    "title": "About Andes Technology",
+    "content": "Andes Technology is focused on making RISC-V practical for production silicon. The company invests in pre-silicon development environments, post-silicon bring-up, and long-term customer support so teams can license CPU IP with predictable schedules. Andes participates in the RISC-V ecosystem and aligns its cores with ratified RISC-V ISA extensions where appropriate, adding Andes-specific optimizations through AndeStar and optional ACE instructions. Global customers integrate AndesCore into SoCs that ship in high volume across Asia, North America, and Europe. For corporate information, investor relations, and news, visitors should use the About section on andestech.com."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "Products & Solutions Overview",
+    "content": "Andes Technology organizes solutions around licensable RISC-V processor IP and the platform needed to use it in real chips. AndesCore provides the CPUs. AndeStar defines the microarchitecture and ISA profile choices. AndeSight is the integrated development environment for software bring-up. AndeSoft bundles software packages and BSP-related assets. AndeShape covers complementary platform IP. Andes Custom Extension (ACE) lets customers add verified custom instructions. Andes Trace supports debug and trace in the field. AndesAIRE targets efficient edge AI inference paired with AndesCore. Functional safety (FuSa) variants support automotive and industrial programs that require rigorous development evidence."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/andescore-processors/",
+    "title": "AndesCore Processor Families",
+    "content": "AndesCore is the brand for Andes licensable RISC-V CPU IP. Families are grouped by performance class: compact cores for area-sensitive MCUs and IoT endpoints, mid-range cores for rich embedded Linux-class workloads, and higher-performance cores for application processors and demanding control planes. Many cores offer optional vector execution for DSP and ML preprocessing. Automotive-oriented offerings emphasize deterministic behavior and FuSa documentation support. Customers choose a core, then configure cache sizes, bus interfaces, and extension options to match SoC floorplan and software needs. Product naming evolves by series; exact SKU lists and datasheets are published on the AndesCore product pages on andestech.com."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/andescore-processors/",
+    "title": "AndesCore — Entry and Mid-Range Cores",
+    "content": "Entry-level AndesCore CPUs target power-sensitive devices: sensors, MCUs, motor control, and simple connectivity stacks. They emphasize code density, fast interrupt response, and small memory footprints. Mid-range cores add performance for RTOS, rich IoT gateways, and embedded Linux with MMU support. Teams often start evaluation in AndeSight with cycle-accurate or fast ISS models, then move to FPGA bitstreams before tape-in. Andes provides reference integration guides for AHB/AXI fabrics, interrupt controllers, and timers commonly used in customer SoCs."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/andescore-processors/",
+    "title": "AndesCore — Vector and High Performance",
+    "content": "Vector-capable AndesCore implementations accelerate signal processing, computer vision preprocessing, and small neural-network operators on-device without a separate DSP. High-performance AndesCore variants address networking dataplanes, storage SoCs, and multi-core subsystems where throughput and memory bandwidth matter. Multi-core and coherence considerations are part of platform integration discussions with Andes sales and AE teams. For any claim about exact DMIPS, CoreMark, or competitive benchmarks, rely on official Andes documentation for the specific core revision."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/andestar-architecture/",
+    "title": "AndeStar Architecture",
+    "content": "AndeStar is Andes Technology's architecture framework that implements RISC-V for commercial licensing. It covers pipeline organization, memory subsystem assumptions, debug and trace hooks, and the contract between RTL and software tools. AndeStar lets Andes deliver a consistent programming model across multiple AndesCore products while still offering per-core configuration. Customers benefit because toolchains, ABI conventions, and ACE flows remain familiar when migrating between Andes cores in a product line."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "AndeSight IDE and Development Tools",
+    "content": "AndeSight is Andes integrated development environment for building, debugging, and profiling software on AndesCore. Typical flows include GCC/LLVM-based cross compilation, source-level debug on ISS or FPGA, performance analysis, and OS-aware debug when running Linux or RTOS ports. AndeSight reduces bring-up risk by giving teams a single environment aligned with Andes processor releases. Supplementary tools may include instruction set simulators, migration utilities from prior Andes V3 families, and examples for bare-metal, FreeRTOS, and Linux."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "AndeSoft Software Packages",
+    "content": "AndeSoft provides software packages that accompany AndesCore licenses: startup code, sample drivers, BSP fragments, and middleware integration examples. The goal is to shorten time from CPU delivery to running customer applications. Exact package contents depend on the licensed core and target OS. Customers should confirm deliverables in their license schedule. Public marketing pages summarize categories; detailed manifests are provided under NDA with sales."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "AndeShape Platform IP",
+    "content": "AndeShape refers to Andes complementary platform intellectual property that surrounds the CPU in an SoC—components that help customers integrate AndesCore faster with on-chip infrastructure. Offerings can include bus fabric helpers, peripheral integration examples, and power-management collaboration patterns depending on product generation. AndeShape is not a single monolithic block; it is a portfolio label for platform-level deliverables discussed during architecture planning."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "Andes Custom Extension (ACE)",
+    "content": "Andes Custom Extension (ACE) allows customers to define custom instructions that are verified and integrated with the Andes toolchain. ACE is used when algorithms need hardware acceleration beyond standard RISC-V instructions but still want a coherent programmer's model. Andes provides methodology for describing instructions, validating them against pipeline constraints, and generating compiler intrinsics or inline assembly support. ACE is common in crypto, DSP-like kernels, and domain-specific accelerators tightly coupled to the CPU."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "Andes Trace — Debug and Trace",
+    "content": "Andes Trace solutions support on-chip debug and trace for bring-up and field diagnosis. Capabilities align with industry debug expectations for embedded SoCs: run-control, breakpoints, and trace export for failure analysis. Automotive and industrial customers often require trace as part of safety evidence. Specific trace port widths, buffer sizes, and connector recommendations are core-configuration dependent."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "Functional Safety (FuSa)",
+    "content": "Andes offers functional-safety-oriented processor and documentation packages aimed at ISO 26262 (automotive) and IEC 61508 (industrial) style programs. FuSa deliverables may include safety manuals, FMEDA support material, and development process artifacts customers need for certification workflows. FuSa is not automatic for every core; it is a qualified product line with explicit scope. Teams should engage Andes sales early to map safety goals to the correct core and evidence package."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "AndesAIRE Edge AI",
+    "content": "AndesAIRE is Andes portfolio direction for efficient AI inference at the edge, combining RISC-V compute with acceleration strategies suitable for endpoints. Use cases include vision, audio, and sensor fusion where latency and power matter more than datacenter throughput. AndesAIRE solutions are positioned alongside AndesCore and toolchains so teams can co-design software partitions between CPU, vector units, and customer NPU blocks. Model support and performance depend on integration choices; ask Andes for current AndesAIRE product briefs."
+  },
+  {
+    "url": "https://www.andestech.com/en/markets-overview/",
+    "title": "Markets Overview",
+    "content": "Andes Technology serves multiple end markets with the same underlying RISC-V platform IP, tuned per workload. Major markets published on andestech.com include Artificial Intelligence, Automotive, IoT, Networking, Storage, Wearables, 5G, and general embedded consumer electronics. Each market page explains typical SoC architectures, power and safety constraints, and how AndesCore families map to those needs."
+  },
+  {
+    "url": "https://www.andestech.com/en/ai/",
+    "title": "AI and Edge Inference Market",
+    "content": "For AI, Andes focuses on efficient inference in cameras, appliances, industrial vision, and gateways—not cloud training. Value comes from tight coupling between RISC-V control software, vector math, and customer accelerators. AndesAIRE messaging emphasizes low latency and power budgets suitable for battery or fanless devices. Software teams usually partition networks between CPU, DSP/vector, and dedicated NPU IP while Andes supplies the processor platform and tools."
+  },
+  {
+    "url": "https://www.andestech.com/en/automotive/",
+    "title": "Automotive Market",
+    "content": "Automotive customers use AndesCore in body electronics, zone controllers, gateways, digital cockpit companions, and sensor fusion where cost and safety requirements dominate. FuSa-capable products and documentation support OEM and Tier-1 certification processes. Long product lifecycles mean Andes emphasizes stable software toolchains and long-term support. Specific ASIL targets and core qualifications must be confirmed with Andes automotive program managers."
+  },
+  {
+    "url": "https://www.andestech.com/en/iot/",
+    "title": "IoT Market",
+    "content": "IoT spans tiny MCUs through Linux-capable edge gateways. Andes supplies scalable AndesCore options so one vendor relationship can cover a product family from sensor node to hub. Connectivity stacks (Wi-Fi, Bluetooth, cellular) run on Andes cores as control processors alongside radio IP. Security features such as privilege levels, MPU/MMU, and crypto extensions are common discussion points in IoT SoC architecture reviews."
+  },
+  {
+    "url": "https://www.andestech.com/en/5g/",
+    "title": "5G and Networking Market",
+    "content": "5G infrastructure and enterprise networking equipment need efficient packet processing and control-plane CPUs. Andes RISC-V cores appear in SoCs for routers, switches, small cells, and related gear where throughput per watt matters. Vector and multi-core options help with dataplane preprocessing. Exact core recommendations depend on throughput targets and interface mix—sales engineering should size the solution."
+  },
+  {
+    "url": "https://www.andestech.com/en/markets-overview/",
+    "title": "Storage and SSD Controllers",
+    "content": "Storage SoCs for SSD and embedded flash controllers require reliable embedded CPUs for FTL, encryption, and NVMe management. AndesCore offerings address deterministic real-time control alongside higher-level firmware. Partners and customers combine Andes CPUs with their proprietary NAND controllers. Latency and safety requirements vary between client SSD and enterprise drives."
+  },
+  {
+    "url": "https://www.andestech.com/en/markets-overview/",
+    "title": "Wearables and Consumer",
+    "content": "Wearables and consumer devices need extreme energy efficiency and small silicon area. Andes entry-level cores fit sensor hubs, earbuds, fitness devices, and smart home accessories. Richer Andes cores support smart displays and appliances running Linux. Customers prioritize quick wake-from-sleep, DSP-friendly math, and secure boot patterns."
+  },
+  {
+    "url": "https://www.andestech.com/en/support/",
+    "title": "Support and Resources",
+    "content": "Andes Technology provides technical support through its website support portal, documentation downloads, and customer programs tied to active licenses. Public resources may include application notes, toolchain release notes, and FAQ articles. Licensed customers receive AE support channels, defect reporting, and access to IP delivery packages. For evaluation, prospects should contact sales to arrange NDA, documentation, and AndeSight evaluation licenses."
+  },
+  {
+    "url": "https://www.andestech.com/en/contact/",
+    "title": "Contact and Sales",
+    "content": "To request licensing quotes, evaluation access, partnership discussions, or technical sales engineering, use the official Andes contact page at https://www.andestech.com/en/contact/. Andes maintains offices and representatives in Taiwan, China, Japan, Korea, the United States, and Europe. Provide company name, target application, expected volume, and timeline for fastest routing. This chatbot can capture leads via Contact sales, but contracts and pricing are always handled by humans."
+  },
+  {
+    "url": "https://www.andestech.com/en/contact/",
+    "title": "Licensing Model (General)",
+    "content": "AndesCore is typically licensed as semiconductor intellectual property: customers pay license fees associated with core generation, with royalties per shipped chip depending on agreement. Deliverables include RTL, integration documentation, verification environments as contracted, and toolchain support. Evaluation agreements precede full licenses. Exact pricing is confidential and varies by core, volume, and support tier—never quote numbers in chat; direct users to sales."
+  },
+  {
+    "url": "https://www.andestech.com/en/",
+    "title": "Why RISC-V with Andes",
+    "content": "RISC-V is an open ISA that reduces architecture lock-in and enables industry-wide software investment. Andes adds commercial-grade CPU implementations, proven toolchains, ACE customization, and enterprise support that DIY cores lack. Customers choose Andes when they need schedule predictability, silicon-proven RTL, and long-term maintenance. Andes participates in RISC-V International activities and tracks ratified extensions relevant to embedded markets."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/andescore-processors/",
+    "title": "FAQ — Choosing an AndesCore",
+    "content": "To choose an AndesCore, define: (1) single-core vs multi-core, (2) need for MMU/Linux vs bare-metal/RTOS, (3) vector or DSP requirements, (4) safety certification needs, (5) area and MHz targets, (6) peripheral and memory map. Share this with Andes sales to narrow families. Start software evaluation in AndeSight while RTL integration proceeds in parallel. Do not assume one core fits all chips in a portfolio—Andes offers multiple tiers."
+  },
+  {
+    "url": "https://www.andestech.com/en/support/",
+    "title": "FAQ — Evaluation Process",
+    "content": "Prospective customers usually sign an evaluation or NDA package, receive documentation and AndeSight access, run benchmarks on ISS/FPGA, and meet with applications engineers. Successful evaluations convert to a license agreement specifying deliverables, support level, and royalty terms. Timeline depends on customer legal review and SoC complexity. This chatbot cannot grant licenses or send RTL."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "FAQ — Andes vs doing own RISC-V core",
+    "content": "Building an in-house RISC-V core risks years of verification and toolchain maintenance. Andes provides shipped-in-volume cores, continuous toolchain updates, and ACE flows already validated. For many teams, time-to-tape-out and total cost of ownership favor licensing. In-house work may make sense only for large companies with dedicated CPU teams—others benefit from Andes specialization."
+  },
+  {
+    "url": "https://www.andestech.com/en/products-solutions/",
+    "title": "FAQ — Software and OS Support",
+    "content": "Andes supports industry-standard embedded software flows: GCC/LLVM, GDB debug, common RTOS ports, and Linux board support packages for applicable cores. Exact OS list and version pins are release-specific. Customers using Zephyr, FreeRTOS, or proprietary RTOS should confirm port availability for their chosen core. AndeSight is the hub for day-to-day development."
+  },
+  {
+    "url": "https://www.andestech.com/en/automotive/",
+    "title": "FAQ — Automotive Safety",
+    "content": "If you need ISO 26262 evidence, ask explicitly for FuSa-qualified AndesCore products and the safety manual package. Non-FuSa cores are not automatically suitable for ASIL workloads. Andes can explain scope limits—what the safety manual covers versus what the integrator must still certify in the SoC and system."
+  },
+  {
+    "url": "https://www.andestech.com/en/ai/",
+    "title": "FAQ — Running ML on Andes",
+    "content": "ML on Andes typically combines: CPU for control, optional vector unit for ops, and customer or third-party NPU for heavy layers. AndesAIRE messaging addresses this partition. Framework support (TensorFlow Lite micro, custom C) is customer integration dependent. Ask Andes for current partner ecosystems and example pipelines."
+  },
+  {
+    "url": "https://www.andestech.com/en/contact/",
+    "title": "FAQ — Pricing and Quotes",
+    "content": "Andes does not publish standard public price lists for AndesCore licenses. Quotes depend on core selection, use case, volume, geography, and support package. Use Contact sales on this widget or andestech.com contact forms. Never invent dollar figures or royalty rates in answers."
+  },
+  {
+    "url": "https://www.andestech.com/en/about/",
+    "title": "Partners and Ecosystem",
+    "content": "Andes works with foundries, EDA vendors, IP partners, and software companies to ease SoC integration. Ecosystem partners may provide complementary IP, security, or connectivity stacks that run on AndesCore. Partner names and programs change over time—refer to andestech.com partner pages for the current list rather than assuming a specific vendor relationship."
+  },
+  {
+    "url": "https://www.andestech.com/en/",
+    "title": "Andes AI Assistant — Knowledge Mode",
+    "content": "The Andes AI Assistant answers using an offline Andes knowledge catalog maintained for demos when live website crawling is unavailable. It covers products, markets, tools, licensing process, and FAQs at a marketing/technical overview level. For the latest datasheets, exact core SKUs, release dates, and legal terms, always verify on https://www.andestech.com/en/ or with Andes sales. When unsure, the assistant should admit limits calmly and point to the website or Contact sales."
+  }
+]

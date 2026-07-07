@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local runtime data (use data/bundled/rag.db for Docker seed)
+data/rag.db
+data/crawl_progress.json
+data/label_images.log
+*.log
+
+# Handoff / build artifacts
+andeschatbot.tar
+andeschatbot.zip
+andes-ai-chatbot.zip
+Chatbot_Test_ver1.zip
+*.tar
+
+# Frontend (separate repo / WP plugin zip)
+wordpress-plugin/
+local-wordpress/
+
+# IDE / OS
+.cursor/
+.DS_Store
+.docker-tools/
+
+# Supabase local (optional)
+supabase/.temp/

@@ -1,0 +1,155 @@
+/* Andes demo landing — matches andestech.com-style layout */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #333;
+  background: #fff;
+}
+a { color: #00709e; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 40px;
+  background: #fff;
+  border-bottom: 1px solid #e6e6e6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.site-header .brand img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 28px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.site-nav a {
+  color: #333;
+  text-decoration: none;
+}
+.site-nav a:hover {
+  color: #00709e;
+}
+
+.hero {
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, #005a82 0%, #00709e 42%, #1a9ec4 100%);
+  color: #fff;
+  overflow: hidden;
+}
+.hero-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 56px 40px 64px;
+  width: 100%;
+}
+.hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(1.85rem, 3.5vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.hero p {
+  margin: 0;
+  max-width: 560px;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  font-weight: 400;
+  opacity: 0.95;
+}
+.hero-cta {
+  display: inline-block;
+  margin-top: 28px;
+  padding: 11px 22px;
+  background: #fff;
+  color: #00709e;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 3px;
+  text-decoration: none;
+}
+.hero-cta:hover {
+  background: #f0f8fb;
+  text-decoration: none;
+}
+
+.section {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 48px 40px 56px;
+}
+.section h2 {
+  margin: 0 0 8px;
+  font-size: 1.65rem;
+  color: #00709e;
+  font-weight: 700;
+}
+.section .lead {
+  margin: 0 0 28px;
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .cards { grid-template-columns: 1fr; }
+}
+.card {
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  padding: 22px 20px;
+  background: #fff;
+  transition: box-shadow 0.2s ease;
+}
+.card:hover {
+  box-shadow: 0 2px 12px rgba(0, 70, 97, 0.08);
+}
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: #004561;
+  font-weight: 700;
+}
+.card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.strip {
+  background: #f4f4f4;
+  border-top: 1px solid #ebebeb;
+}
+
+.site-footer {
+  background: #004561;
+  color: rgba(255, 255, 255, 0.88);
+  padding: 28px 40px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.site-footer a { color: #b8ecfa; }
+
+.page-bottom-spacer {
+  height: 88px;
+}

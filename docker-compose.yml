@@ -1,0 +1,29 @@
+# Production — port 8000 on host → nginx → https://chatbot.andestech.com
+# Start: docker compose up -d --build
+# Env:   copy .env.production.example to .env and fill in values
+
+services:
+  api:
+    build: .
+    image: andeschatbot:latest
+    container_name: andeschatbot-prod
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+    volumes:
+      - andes_chat_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  andes_chat_data:
+    name: andes_chat_prod_data
