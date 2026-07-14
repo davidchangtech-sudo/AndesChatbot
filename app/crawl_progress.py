@@ -58,5 +58,17 @@ def read_progress() -> dict:
         return {"status": "idle", "total_urls": 0, "pages_indexed": 0, "chunks_stored": 0, "percent": 0}
     total = int(data.get("total_urls") or 0)
     done = int(data.get("pages_indexed") or 0)
-    data["percent"] = round(100 * done / total, 1) if total else 0
+    status = (data.get("status") or "idle").lower()
+    # If total was stale/wrong (e.g. 1) but many pages indexed, use done as denominator.
+    denom = max(total, done) if done > total else total
+    if status in ("done", "failed"):
+        data["percent"] = 100.0 if status == "done" else (
+            round(100 * done / denom, 1) if denom else 0
+        )
+        if status == "done" and done > 0 and total < done:
+            data["total_urls"] = done
+    elif denom:
+        data["percent"] = min(100.0, round(100 * done / denom, 1))
+    else:
+        data["percent"] = 0
     return data

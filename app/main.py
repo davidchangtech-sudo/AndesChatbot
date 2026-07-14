@@ -52,13 +52,23 @@ app = FastAPI(
 )
 
 settings = get_settings()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.origin_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Cron-Secret", "X-Lead-Admin-Secret", "Authorization"],
-)
+_cors_kwargs: dict = {
+    "allow_origins": settings.origin_list,
+    "allow_credentials": True,
+    "allow_methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type", "X-Cron-Secret", "X-Lead-Admin-Secret", "Authorization"],
+}
+# Local LAN testing: allow private-network hosts when dev routes are enabled
+if settings.enable_dev_routes:
+    _cors_kwargs["allow_origin_regex"] = (
+        r"https?://("
+        r"localhost|127\.0\.0\.1|"
+        r"192\.168\.\d{1,3}\.\d{1,3}|"
+        r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+        r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}"
+        r")(:\d+)?"
+    )
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
 
@@ -292,6 +302,9 @@ async def crawl_progress_stream() -> StreamingResponse:
             prog["kb_chunks"] = getattr(store, "chunk_count", lambda: 0)()
             prog["kb_urls"] = getattr(store, "distinct_url_count", lambda: None)()
             yield f"data: {json.dumps(prog)}\n\n"
+            # Stop streaming once crawl is finished so the UI tick does not keep running.
+            if (prog.get("status") or "").lower() in ("done", "failed", "idle"):
+                break
             await asyncio.sleep(0.25)
 
     return StreamingResponse(

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     rag_min_similarity: float = 0.42
     enable_gemini_fallback: bool = True
     rag_fallback_max_similarity: float = 0.56
+    enable_hybrid_search: bool = True
+    page_url_boost: float = 0.18
 
     cron_secret: str
     lead_admin_secret: str | None = None

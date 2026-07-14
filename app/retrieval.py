@@ -1,9 +1,8 @@
 from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Sequence
+from urllib.parse import urlparse
 
-from app.images import image_search_text, normalize_image_record
-from app.models import MediaItem
 from app.site_links import READ_MORE_MIN_SIMILARITY, SMALLTALK
 
 if TYPE_CHECKING:
@@ -84,9 +83,6 @@ VISUAL_KEYWORDS = (
     "what does",
     "how does it look",
 )
-
-MEDIA_MIN_SIMILARITY = 0.55
-GENERIC_ALT = frozenset({"page image", "image", ""})
 
 FOLLOW_UP_PHRASES = (
     "tell me more",
@@ -303,11 +299,29 @@ def is_finance_url(url: str) -> bool:
     return any(m in lower for m in FINANCE_URL_MARKERS)
 
 
-def rerank_chunks(chunks: list, question: str) -> list:
+def normalize_page_path(page_url: str | None) -> str:
+    if not page_url or not page_url.strip():
+        return ""
+    parsed = urlparse(page_url.strip())
+    path = (parsed.path or "").rstrip("/").lower()
+    if not path or path == "/":
+        return ""
+    return path
+
+
+def _page_path_matches(chunk_url: str, page_path: str) -> bool:
+    if not page_path:
+        return False
+    url_path = urlparse(chunk_url or "").path.rstrip("/").lower()
+    return page_path in url_path or url_path in page_path
+
+
+def rerank_chunks(chunks: list, question: str, *, page_url: str | None = None, page_boost: float = 0.18) -> list:
     if not chunks:
         return chunks
     intents = query_intents(question)
     named_products = _named_products_in_text(question)
+    page_path = normalize_page_path(page_url)
     adjusted: list[tuple[float, object]] = []
 
     for chunk in chunks:
@@ -315,6 +329,9 @@ def rerank_chunks(chunks: list, question: str) -> list:
         url = chunk.url or ""
         url_lower = url.lower()
         title_lower = (chunk.title or "").lower()
+
+        if page_path and _page_path_matches(url, page_path):
+            score += page_boost
 
         if "product" in intents and "finance" not in intents:
             if is_product_url(url):
@@ -364,110 +381,3 @@ def dedupe_chunks_by_url(chunks: list) -> list:
     out = list(best.values())
     out.sort(key=lambda c: c.similarity, reverse=True)
     return out
-
-
-def _image_label(img: dict) -> str:
-    return image_search_text(img) or (img.get("label") or img.get("alt") or "").strip()
-
-
-def _image_usable(img: dict) -> bool:
-    rec = normalize_image_record(img)
-    label = image_search_text(rec)
-    if not label or label.lower() in GENERIC_ALT:
-        return False
-    if label.upper().startswith("REJECT"):
-        return False
-    return bool(rec.get("url"))
-
-
-def _label_matches_question(label: str, question: str) -> bool:
-    q = normalize_question(question)
-    words = {w for w in re.split(r"\W+", q) if len(w) > 2}
-    label_lower = label.lower()
-    hits = sum(1 for w in words if w in label_lower)
-    if hits >= 1:
-        return True
-    for match in TOPIC_HINT_RE.finditer(question):
-        token = match.group(0).lower()
-        if token in label_lower:
-            return True
-    product_words = [w for w in PRODUCT_INTENT_WORDS if w in q]
-    return any(w in label_lower for w in product_words)
-
-
-def _score_image_for_query(img: dict, query_text: str) -> int:
-    label = image_search_text(img).lower()
-    if not label:
-        return 0
-    q = normalize_question(query_text)
-    words = [w for w in re.split(r"\W+", q) if len(w) > 2]
-    score = sum(2 for w in words if w in label)
-    for match in TOPIC_HINT_RE.finditer(query_text):
-        token = match.group(0).lower()
-        if token in label:
-            score += 4
-    if any(k in q for k in ("diagram", "architecture", "block")) and any(
-        k in label for k in ("diagram", "architecture", "block")
-    ):
-        score += 3
-    if any(k in q for k in ("chart", "table", "graph")) and any(
-        k in label for k in ("chart", "table", "graph")
-    ):
-        score += 3
-    return score
-
-
-def pick_media(chunks: list, question: str, search_query: str | None = None) -> MediaItem | None:
-    if not chunks:
-        return None
-    q = question.strip().lower()
-    if len(q) < 6 or q in SMALLTALK:
-        return None
-
-    query_text = f"{search_query or ''} {question}".strip()
-    intents = query_intents(question)
-    visual = "visual" in intents
-    wants_diagram = any(
-        k in normalize_question(question)
-        for k in ("diagram", "architecture", "look like", "show me", "picture", "photo", "chart")
-    )
-
-    if not visual and not wants_diagram:
-        return None
-
-    min_score = 2
-
-    best: MediaItem | None = None
-    best_score = 0
-
-    for chunk in chunks[:5]:
-        if chunk.similarity < MEDIA_MIN_SIMILARITY:
-            continue
-        if is_finance_url(chunk.url or ""):
-            continue
-
-        for img in chunk.images or []:
-            if not _image_usable(img):
-                continue
-            rec = normalize_image_record(img)
-            label = image_search_text(rec)
-            score = _score_image_for_query(rec, query_text)
-            if score <= 0 and not visual:
-                if not _label_matches_question(label, question):
-                    continue
-                score = 1
-            if visual and chunk.similarity >= READ_MORE_MIN_SIMILARITY and score >= 1:
-                score += 2
-            if score > best_score:
-                best_score = score
-                caption = rec.get("description") or rec.get("label") or rec.get("alt") or "From andestech.com"
-                best = MediaItem(url=rec["url"], alt=_clean_media_caption(caption))
-
-    if best and best_score >= min_score:
-        return best
-    return None
-
-
-def _clean_media_caption(text: str) -> str:
-    text = re.sub(r"^This (image|diagram|chart|table|photo) (shows|is|illustrates)\s+", "", text, flags=re.I)
-    return text.strip()[:200]

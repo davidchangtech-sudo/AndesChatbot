@@ -106,7 +106,7 @@ class GeminiClient:
                 contents=[types.Content(role="user", parts=[types.Part(text=user_prompt)])],
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    temperature=0.45,
+                    temperature=0.3,
                     max_output_tokens=max_output_tokens,
                     thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
@@ -162,7 +162,7 @@ class GeminiClient:
                 contents=[types.Content(role="user", parts=[types.Part(text=user_prompt)])],
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    temperature=0.45,
+                    temperature=0.3,
                     max_output_tokens=max_output_tokens,
                     thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),

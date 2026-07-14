@@ -58,13 +58,30 @@
   var CHAT_STATE_KEY = "andes_chat_state";
   var CHAT_TTL_MS = 30 * 60 * 1000;
 
+  // Per-tab session: sessionStorage isolates each tab and clears on tab close.
+  // Falls back to localStorage only if sessionStorage is unavailable.
+  var chatStore = (function () {
+    try {
+      var k = "__andes_probe__";
+      window.sessionStorage.setItem(k, "1");
+      window.sessionStorage.removeItem(k);
+      return window.sessionStorage;
+    } catch (e) {
+      try {
+        return window.localStorage;
+      } catch (e2) {
+        return null;
+      }
+    }
+  })();
+
   function newSessionId() {
     return "s_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
   function loadChatState() {
     try {
-      var raw = localStorage.getItem(CHAT_STATE_KEY);
+      var raw = chatStore && chatStore.getItem(CHAT_STATE_KEY);
       if (raw) {
         var st = JSON.parse(raw);
         if (st && st.lastActivityAt && Date.now() - st.lastActivityAt < CHAT_TTL_MS) {
@@ -75,18 +92,16 @@
             conversationSummary: typeof st.conversationSummary === "string" ? st.conversationSummary : "",
           };
         }
-        localStorage.removeItem(CHAT_STATE_KEY);
+        chatStore.removeItem(CHAT_STATE_KEY);
       }
     } catch (e) {}
-    try {
-      localStorage.removeItem("andes_chat_session");
-    } catch (e2) {}
     return { sessionId: newSessionId(), userMsgCount: 0, messages: [], conversationSummary: "" };
   }
 
   function saveChatState() {
+    if (!chatStore) return;
     try {
-      localStorage.setItem(
+      chatStore.setItem(
         CHAT_STATE_KEY,
         JSON.stringify({
           sessionId: sessionId,
@@ -99,7 +114,10 @@
     } catch (e) {}
   }
 
+  // Clean up legacy keys, incl. any old cross-tab session in localStorage.
   try {
+    localStorage.removeItem(CHAT_STATE_KEY);
+    localStorage.removeItem("andes_chat_session");
     localStorage.removeItem("andes_chat_panel_size");
     localStorage.removeItem("andes_chat_panel_size_v2");
   } catch (e) {}
@@ -144,12 +162,18 @@
   var styles =
     "#andes-chat-root{font-family:" +
     font +
-    ";font-size:15px;z-index:99999;-webkit-font-smoothing:antialiased}" +
+    ";font-size:15px;line-height:1.45;z-index:99999;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}" +
+    "#andes-chat-root *{box-sizing:border-box}" +
+    "#andes-chat-root :focus{outline:none}" +
+    "#andes-chat-root :focus-visible{outline:2px solid " +
+    C.primary +
+    ";outline-offset:2px}" +
     "#andes-chat-backdrop{position:fixed;inset:0;background:rgba(0,22,31,.5);z-index:100000;opacity:0;pointer-events:none;transition:opacity .2s ease}" +
     "#andes-chat-backdrop.visible{opacity:1;pointer-events:auto}" +
-    "#andes-chat-btn{position:fixed;right:20px;bottom:20px;z-index:100003;border:none;cursor:pointer;padding:0;background:transparent;overflow:visible}" +
-    "#andes-chat-btn.panel-open{opacity:0;pointer-events:none}" +
+    "#andes-chat-btn{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));z-index:100003;border:none;cursor:pointer;padding:0;background:transparent;overflow:visible;border-radius:50%}" +
+    "#andes-chat-btn.panel-open{opacity:0;pointer-events:none;visibility:hidden}" +
     ".andes-bubble-launcher{display:block;animation:andes-float 2.8s ease-in-out infinite;transform-origin:center bottom}" +
+    "@media (prefers-reduced-motion:reduce){.andes-bubble-launcher{animation:none}#andes-chat-panel,#andes-chat-backdrop{transition:none}.andes-row{animation:none;opacity:1}}" +
     ".andes-bubble-launcher-inner{position:relative;display:inline-block;overflow:visible}" +
     "#andes-chat-btn:hover .andes-bubble-launcher{animation-duration:2.2s}" +
     "#andes-chat-btn:hover .andes-speech-bubble{transform:scale(1.05)}" +
@@ -168,7 +192,7 @@
     ".andes-launcher-svg{display:block;width:72px;height:72px;overflow:visible}" +
     ".andes-launcher-logo{position:absolute;left:50%;top:36px;width:38px;height:auto;max-height:14px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none}" +
     "@keyframes andes-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}" +
-    "#andes-chat-panel{display:none;position:fixed;right:20px;bottom:20px;width:400px;max-width:calc(100vw - 24px);height:min(720px,calc(100vh - 40px));max-height:calc(100vh - 40px);" +
+    "#andes-chat-panel{display:none;position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));width:400px;max-width:calc(100vw - 24px);height:min(720px,calc(100vh - 40px));max-height:calc(100vh - 40px - env(safe-area-inset-bottom,0px));" +
     "background:" +
     C.bg +
     ";border-radius:16px;box-shadow:0 12px 40px rgba(0,22,31,.2);flex-direction:column;overflow:hidden;z-index:100001;border:1px solid " +
@@ -198,17 +222,22 @@
     C.primaryDark +
     ");color:#fff;padding:8px 12px 6px;position:relative;flex-shrink:0}" +
     "#andes-chat-header-actions{position:absolute;right:8px;top:8px;display:flex;gap:4px;z-index:50}" +
-    "#andes-chat-close,#andes-chat-expand,#andes-chat-refresh{width:28px;height:28px;border:none;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}" +
+    "#andes-chat-close,#andes-chat-expand,#andes-chat-refresh{width:28px;height:28px;border:none;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s ease}" +
+    "#andes-chat-close:hover,#andes-chat-expand:hover,#andes-chat-refresh:hover{background:rgba(255,255,255,.32)}" +
+    "#andes-chat-close{font-size:20px;line-height:1}" +
     "#andes-chat-header .andes-header-brand{padding-right:100px}" +
     "#andes-chat-header .andes-header-logo{height:24px;width:auto}" +
     "#andes-chat-header .andes-header-title{margin:4px 0 0;font-size:13px;font-weight:600;color:#fff;letter-spacing:.01em}" +
     "#andes-chat-header .andes-header-tagline{margin:1px 0 0;font-size:10px;font-weight:400;color:rgba(255,255,255,.85);line-height:1.25}" +
-    "#andes-chat-messages{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}" +
-    ".andes-row{display:flex;gap:8px;align-items:flex-end;opacity:0;animation:andes-fade .18s ease forwards}" +
+    "#andes-chat-messages{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;overscroll-behavior:contain}" +
+    ".andes-row{display:flex;gap:8px;align-items:flex-end;opacity:0;animation:andes-fade .18s ease forwards;max-width:100%}" +
     "@keyframes andes-fade{to{opacity:1}}" +
     ".andes-row.user{align-self:flex-end;max-width:88%}" +
     ".andes-row.bot{align-self:flex-start;max-width:92%}" +
-    ".andes-bubble{padding:10px 14px;border-radius:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}" +
+    ".andes-bubble{padding:10px 14px;border-radius:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font-size:15px}" +
+    ".andes-bubble strong{font-weight:600;color:" +
+    C.primaryDark +
+    "}" +
     ".andes-row.user .andes-bubble{background:" +
     C.userBubble +
     ";color:#fff;border-bottom-right-radius:4px}" +
@@ -223,24 +252,18 @@
     C.border +
     ";display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}" +
     ".andes-avatar svg{width:22px;height:22px}" +
-    ".andes-readmore-wrap{margin-left:34px;max-width:92%}" +
-    ".andes-readmore-wrap a{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:" +
+    ".andes-readmore-wrap{margin-left:34px;max-width:92%;margin-top:2px}" +
+    ".andes-readmore-wrap a{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:" +
     C.primary +
     ";background:#fff;border:1px solid " +
     C.border +
-    ";padding:6px 12px;border-radius:999px;text-decoration:none}" +
+    ";padding:7px 13px;border-radius:999px;text-decoration:none;transition:background .15s ease,border-color .15s ease}" +
+    ".andes-readmore-wrap a::after{content:\"\";display:inline-block;width:11px;height:11px;background:currentColor;mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3'/%3E%3C/svg%3E\") center/contain no-repeat;-webkit-mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3'/%3E%3C/svg%3E\") center/contain no-repeat;opacity:.85}" +
     ".andes-readmore-wrap a:hover{background:#e8f4f8;border-color:" +
     C.primary +
     "}" +
-    ".andes-media-wrap{margin-left:34px;max-width:92%;margin-top:2px}" +
-    ".andes-media-wrap img{display:block;max-width:100%;max-height:200px;width:auto;border-radius:10px;border:1px solid " +
-    C.border +
-    ";background:#fff;object-fit:contain}" +
-    ".andes-media-wrap figcaption{font-size:10px;color:" +
-    C.muted +
-    ";margin-top:4px;line-height:1.3}" +
     "#andes-site-links{display:flex;flex-wrap:wrap;gap:5px;padding:6px 12px 8px;background:rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.12)}" +
-    "#andes-site-links a{font-size:11px;color:#fff;text-decoration:none;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.15);white-space:nowrap}" +
+    "#andes-site-links a{font-size:11px;color:#fff;text-decoration:none;padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.15);white-space:nowrap;min-height:28px;display:inline-flex;align-items:center}" +
     "#andes-site-links a:hover{background:rgba(255,255,255,.28)}" +
     "#andes-chat-footer{flex-shrink:0;background:#fff;border-top:1px solid " +
     C.border +
@@ -275,7 +298,7 @@
     "#andes-lead-panel input,#andes-lead-panel select,#andes-lead-panel textarea{width:100%;padding:9px 10px;border:1px solid " +
     C.border +
     ";border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box}" +
-    "#andes-lead-panel input.andes-invalid{border-color:#c62828;background:#fff8f8;box-shadow:0 0 0 1px #ffcdd2}" +
+    "#andes-lead-panel input.andes-invalid,#andes-lead-panel select.andes-invalid{border-color:#c62828;background:#fff8f8;box-shadow:0 0 0 1px #ffcdd2}" +
     "#andes-lead-panel input.andes-invalid:focus{border-color:#c62828;outline:none}" +
     ".andes-field-error-msg{display:none;color:#c62828;font-size:12px;margin:-2px 0 8px;line-height:1.35}" +
     ".andes-field-error-msg.show{display:block}" +
@@ -314,19 +337,33 @@
     "}" +
     "#andes-chat-input{flex:1;border:1px solid " +
     C.border +
-    ";border-radius:10px;padding:10px 12px;font-size:15px;resize:none;min-height:42px;max-height:96px;font-family:inherit;outline:none}" +
+    ";border-radius:10px;padding:10px 12px;font-size:15px;resize:none;min-height:44px;max-height:120px;font-family:inherit;outline:none;line-height:1.45;transition:border-color .15s ease,box-shadow .15s ease}" +
     "#andes-chat-input:focus{border-color:" +
     C.primary +
+    ";box-shadow:0 0 0 3px rgba(0,112,158,.12)}" +
+    "#andes-chat-input:disabled{background:#f7f9fa;color:" +
+    C.muted +
+    ";cursor:not-allowed}" +
+    "#andes-chat-send{width:44px;height:44px;border:none;border-radius:10px;background:" +
+    C.primary +
+    ";color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s ease,opacity .15s ease,transform .1s ease}" +
+    "#andes-chat-send:hover:not(:disabled){background:" +
+    C.primaryDark +
     "}" +
-    "#andes-chat-send{width:40px;height:40px;border:none;border-radius:10px;background:" +
+    "#andes-chat-send:active:not(:disabled){transform:scale(0.97)}" +
+    "#andes-chat-send:disabled{opacity:.45;cursor:not-allowed}" +
+    ".andes-typing-row .andes-typing-bubble{padding:12px 16px;min-width:52px}" +
+    ".andes-typing-dots{display:inline-flex;align-items:center;gap:5px;height:10px}" +
+    ".andes-typing-dots span{width:6px;height:6px;background:" +
     C.primary +
-    ";color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}" +
-    ".andes-typing{display:flex;gap:8px;padding:4px 0;opacity:.7}" +
-    ".andes-typing span{width:6px;height:6px;background:" +
-    C.primary +
-    ";border-radius:50%;animation:andes-blink 1s ease-in-out infinite}" +
-    ".andes-typing span:nth-child(2){animation-delay:.15s}" +
-    ".andes-typing span:nth-child(3){animation-delay:.3s}" +
+    ";border-radius:50%;animation:andes-blink 1s ease-in-out infinite;opacity:.35}" +
+    ".andes-typing-dots span:nth-child(2){animation-delay:.15s}" +
+    ".andes-typing-dots span:nth-child(3){animation-delay:.3s}" +
+    ".andes-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}" +
+    ".andes-lead-banner{display:none;margin:0 0 10px;padding:9px 11px;border-radius:8px;font-size:12px;line-height:1.4}" +
+    ".andes-lead-banner.show{display:block}" +
+    ".andes-lead-banner.error{color:#b71c1c;background:#ffebee;border:1px solid #ffcdd2}" +
+    ".andes-lead-banner.success{color:#1b5e20;background:#e8f5e9;border:1px solid #c8e6c9}" +
     "@keyframes andes-blink{0%,100%{opacity:.25}50%{opacity:1}}";
 
   var root = document.createElement("div");
@@ -336,24 +373,24 @@
     styles +
     "</style>" +
     '<div id="andes-chat-backdrop"></div>' +
-    '<button type="button" id="andes-chat-btn" aria-label="Open Andes AI Assistant">' +
+    '<button type="button" id="andes-chat-btn" aria-label="Open Andes AI Assistant" aria-expanded="false" aria-controls="andes-chat-panel">' +
     '<span class="andes-bubble-launcher">' +
     launcherBubbleHtml +
     "</span></button>" +
-    '<div id="andes-chat-panel" role="dialog">' +
+    '<div id="andes-chat-panel" role="dialog" aria-modal="true" aria-labelledby="andes-chat-title" aria-describedby="andes-chat-tagline">' +
     '<div id="andes-chat-header">' +
     '<div id="andes-chat-header-actions">' +
-    '<button type="button" id="andes-chat-refresh" aria-label="Start new chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>' +
-    '<button type="button" id="andes-chat-expand" aria-label="Enlarge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>' +
+    '<button type="button" id="andes-chat-refresh" aria-label="Start new conversation" title="Start new conversation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>' +
+    '<button type="button" id="andes-chat-expand" aria-label="Enlarge chat" aria-pressed="false" title="Enlarge chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>' +
     '<button type="button" id="andes-chat-close" aria-label="Close">×</button></div>' +
     '<div class="andes-header-brand"><img src="' +
     logoWhiteUrl +
-    '" alt="" class="andes-header-logo" /><p class="andes-header-title">Andes AI Assistant</p>' +
-    '<p class="andes-header-tagline">Product guidance &amp; support</p></div>' +
+    '" alt="" class="andes-header-logo" /><p id="andes-chat-title" class="andes-header-title">Andes AI Assistant</p>' +
+    '<p id="andes-chat-tagline" class="andes-header-tagline">Product guidance &amp; support</p></div>' +
     '<nav id="andes-site-links" aria-label="Andes website">' +
     siteLinksHtml +
     "</nav></div>" +
-    '<div id="andes-chat-messages"></div>' +
+    '<div id="andes-chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Chat messages"></div>' +
     '<div id="andes-lead-panel">' +
     '<div class="andes-lead-head"><h3>Book a meeting</h3><button type="button" id="andes-lead-close" aria-label="Close form">×</button></div>' +
     '<div id="andes-lead-success">' +
@@ -362,9 +399,11 @@
     '<p class="andes-success-sub">We received your preferred time. Our team will confirm by email soon.</p>' +
     '<button type="button" id="andes-lead-done">Back to chat</button></div>' +
     '<div id="andes-lead-form-fields">' +
+    '<p id="andes-lead-form-banner" class="andes-lead-banner" role="alert"></p>' +
     '<input type="text" id="andes-hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none" />' +
     '<p class="andes-lead-sub">Choose a date and time — we\'ll confirm with you by email.</p>' +
-    "<label>Name *</label><input id=\"andes-lead-name\" autocomplete=\"name\" />" +
+    "<label for=\"andes-lead-name\">Name *</label><input id=\"andes-lead-name\" autocomplete=\"name\" aria-describedby=\"andes-lead-name-error\" />" +
+    '<p id="andes-lead-name-error" class="andes-field-error-msg" role="alert">Please enter your name.</p>' +
     "<label for=\"andes-lead-email\">Work email *</label><input id=\"andes-lead-email\" type=\"email\" autocomplete=\"email\" aria-describedby=\"andes-lead-email-error\" />" +
     '<p id="andes-lead-email-error" class="andes-field-error-msg" role="alert">Please enter a valid email address.</p>' +
     "<label>Phone <span style=\"font-weight:400;color:" +
@@ -374,9 +413,10 @@
     '<div class="andes-meeting-row">' +
     "<label for=\"andes-lead-date\">Preferred date *</label>" +
     "<label for=\"andes-lead-time\">Preferred time *</label>" +
-    '<input type="date" id="andes-lead-date" />' +
-    '<input type="time" id="andes-lead-time" step="900" />' +
+    '<input type="date" id="andes-lead-date" aria-describedby="andes-lead-meeting-error" />' +
+    '<input type="time" id="andes-lead-time" step="900" aria-describedby="andes-lead-meeting-error" />' +
     "</div>" +
+    '<p id="andes-lead-meeting-error" class="andes-field-error-msg" role="alert">Please choose a preferred date and time.</p>' +
     "<label>I'm interested in</label>" +
     '<select id="andes-lead-interest"><option value="">Select…</option>' +
     "<option>Product demo</option><option>Licensing / quote</option><option>Partnership</option>" +
@@ -384,7 +424,7 @@
     "<label>Notes</label><textarea id=\"andes-lead-message\" rows=\"4\" placeholder=\"What would you like to discuss?\"></textarea>" +
     '<button type="button" id="andes-lead-submit">Book meeting</button></div></div>' +
     '<form id="andes-chat-form">' +
-    '<textarea id="andes-chat-input" rows="1" placeholder="Ask the Andes AI Assistant…"></textarea>' +
+    '<textarea id="andes-chat-input" rows="1" placeholder="Ask the Andes AI Assistant…" aria-label="Message the Andes AI Assistant" maxlength="2000"></textarea>' +
     '<button type="submit" id="andes-chat-send" aria-label="Send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>' +
     "</form>" +
     '<div id="andes-chat-footer">' +
@@ -411,10 +451,12 @@
   var messages = $("andes-chat-messages");
   var input = $("andes-chat-input");
   var form = $("andes-chat-form");
+  sendBtn = $("andes-chat-send");
   var leadPanel = $("andes-lead-panel");
   var leadBarBtn = $("andes-lead-bar-btn");
   var lastUserRow = null;
   var lastChatAt = 0;
+  var chatBusy = false;
   var hpField = null;
   hpField = $("andes-hp");
   var expandBtn = $("andes-chat-expand");
@@ -422,6 +464,67 @@
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
   var expandOff =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>';
+  var sendBtn = null;
+
+  function escapeHtml(text) {
+    var el = document.createElement("div");
+    el.textContent = text || "";
+    return el.innerHTML;
+  }
+
+  function formatBotHtml(text) {
+    var safe = escapeHtml(text || "");
+    return safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  }
+
+  function setBotBubbleContent(bubble, text) {
+    if (!bubble) return;
+    bubble.innerHTML = formatBotHtml(text);
+  }
+
+  function updateSendButtonState() {
+    if (!sendBtn) return;
+    var hasText = !!(input.value || "").trim();
+    sendBtn.disabled = chatBusy || !hasText;
+    sendBtn.setAttribute("aria-disabled", sendBtn.disabled ? "true" : "false");
+  }
+
+  function setChatBusy(busy) {
+    chatBusy = !!busy;
+    input.disabled = chatBusy;
+    input.setAttribute("aria-disabled", chatBusy ? "true" : "false");
+    if (sendBtn) {
+      sendBtn.setAttribute("aria-busy", chatBusy ? "true" : "false");
+    }
+    updateSendButtonState();
+  }
+
+  function scrollMessagesToEnd(smooth) {
+    if (!messages) return;
+    var top = Math.max(0, messages.scrollHeight - messages.clientHeight);
+    if (smooth && messages.scrollTo) {
+      messages.scrollTo({ top: top, behavior: "smooth" });
+    } else {
+      messages.scrollTop = top;
+    }
+  }
+
+  function trapFocusInPanel(e) {
+    if (!panel.classList.contains("open") || e.key !== "Tab") return;
+    var focusable = panel.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   var botAvatarSvg =
     '<svg viewBox="0 0 32 32" aria-hidden="true">' +
@@ -461,7 +564,7 @@
     leadFormFields.classList.remove("hide");
     $("andes-lead-submit").disabled = false;
     $("andes-lead-submit").textContent = "Book meeting";
-    clearEmailInvalid();
+    clearLeadFormErrors();
   }
 
   function closeLeadForm() {
@@ -518,7 +621,22 @@
     setEmailInvalid(false);
   }
 
-  leadEmailInput.addEventListener("input", clearEmailInvalid);
+  leadEmailInput.addEventListener("input", function () {
+    clearEmailInvalid();
+    hideLeadBanner();
+  });
+  $("andes-lead-name").addEventListener("input", function () {
+    setFieldInvalid($("andes-lead-name"), $("andes-lead-name-error"), false);
+    hideLeadBanner();
+  });
+  $("andes-lead-date").addEventListener("change", function () {
+    setFieldInvalid($("andes-lead-date"), $("andes-lead-meeting-error"), false);
+    setFieldInvalid($("andes-lead-time"), $("andes-lead-meeting-error"), false);
+  });
+  $("andes-lead-time").addEventListener("change", function () {
+    setFieldInvalid($("andes-lead-date"), $("andes-lead-meeting-error"), false);
+    setFieldInvalid($("andes-lead-time"), $("andes-lead-meeting-error"), false);
+  });
   leadEmailInput.addEventListener("blur", function () {
     var v = leadEmailInput.value.trim();
     if (v && !isValidEmail(v)) setEmailInvalid(true, "Please enter a valid email address.");
@@ -529,13 +647,47 @@
     else openLeadForm();
   }
 
+  function setFieldInvalid(el, errorEl, on, message) {
+    if (!el) return;
+    el.classList.toggle("andes-invalid", on);
+    el.setAttribute("aria-invalid", on ? "true" : "false");
+    if (errorEl) {
+      if (message) errorEl.textContent = message;
+      errorEl.classList.toggle("show", on);
+    }
+  }
+
+  function clearLeadFormErrors() {
+    setFieldInvalid($("andes-lead-name"), $("andes-lead-name-error"), false);
+    clearEmailInvalid();
+    setFieldInvalid($("andes-lead-date"), $("andes-lead-meeting-error"), false);
+    setFieldInvalid($("andes-lead-time"), $("andes-lead-meeting-error"), false);
+    hideLeadBanner();
+  }
+
+  function showLeadBanner(message, kind) {
+    var banner = $("andes-lead-form-banner");
+    if (!banner) return;
+    banner.textContent = message || "";
+    banner.className = "andes-lead-banner show" + (kind ? " " + kind : "");
+  }
+
+  function hideLeadBanner() {
+    var banner = $("andes-lead-form-banner");
+    if (!banner) return;
+    banner.className = "andes-lead-banner";
+    banner.textContent = "";
+  }
+
+  function autoResizeInput() {
+    if (!input) return;
+    input.style.height = "auto";
+    var next = Math.min(120, Math.max(44, input.scrollHeight));
+    input.style.height = next + "px";
+  }
+
   function scrollRowToTop(row) {
-    if (!row) return;
-    var offset =
-      row.getBoundingClientRect().top -
-      messages.getBoundingClientRect().top +
-      messages.scrollTop;
-    messages.scrollTop = Math.max(0, offset - 8);
+    scrollMessagesToEnd(true);
   }
 
   function appendMsg(text, role, skipRecord) {
@@ -544,7 +696,8 @@
     if (role === "bot") row.insertAdjacentHTML("afterbegin", botAv());
     var b = document.createElement("div");
     b.className = "andes-bubble";
-    b.textContent = text;
+    if (role === "bot") setBotBubbleContent(b, text);
+    else b.textContent = text;
     row.appendChild(b);
     messages.appendChild(row);
     if (!skipRecord && (role === "user" || role === "bot")) {
@@ -554,14 +707,8 @@
       });
       saveChatState();
     }
-    if (role === "user") {
-      lastUserRow = row;
-      scrollRowToTop(row);
-    } else if (role === "bot" && lastUserRow) {
-      scrollRowToTop(lastUserRow);
-    } else {
-      messages.scrollTop = 0;
-    }
+    if (role === "user") lastUserRow = row;
+    scrollMessagesToEnd(role === "bot");
     return row;
   }
 
@@ -574,7 +721,7 @@
     delete messages.dataset.welcomed;
     lastUserRow = null;
     try {
-      localStorage.removeItem(CHAT_STATE_KEY);
+      if (chatStore) chatStore.removeItem(CHAT_STATE_KEY);
     } catch (e) {}
   }
 
@@ -587,17 +734,29 @@
   }
 
   function refreshChat() {
+    var hasUserMsgs = chatHistory.some(function (m) {
+      return m.role === "user";
+    });
+    if (
+      hasUserMsgs &&
+      !window.confirm("Start a new conversation? Your current chat will be cleared.")
+    ) {
+      return;
+    }
     closeLeadForm();
     setExpanded(false);
     clearChatSession();
     lastChatAt = 0;
+    setChatBusy(false);
     showWelcomeMessage();
+    autoResizeInput();
+    updateSendButtonState();
     input.focus();
   }
 
   function ensureFreshChat() {
     try {
-      var raw = localStorage.getItem(CHAT_STATE_KEY);
+      var raw = chatStore && chatStore.getItem(CHAT_STATE_KEY);
       if (!raw) return;
       var st = JSON.parse(raw);
       if (!st.lastActivityAt || Date.now() - st.lastActivityAt >= CHAT_TTL_MS) {
@@ -613,6 +772,7 @@
     chatHistory.forEach(function (m) {
       appendMsg(m.content, m.role === "user" ? "user" : "bot", true);
     });
+    scrollMessagesToEnd(false);
   }
 
   function appendReadMore(link) {
@@ -626,39 +786,22 @@
     a.textContent = link.title || "Read more on our site";
     w.appendChild(a);
     messages.appendChild(w);
-    if (lastUserRow) scrollRowToTop(lastUserRow);
-  }
-
-  function appendMedia(media) {
-    if (!media || !media.url) return;
-    var w = document.createElement("figure");
-    w.className = "andes-media-wrap";
-    var img = document.createElement("img");
-    img.src = media.url;
-    img.alt = media.alt || "From andestech.com";
-    img.loading = "lazy";
-    img.referrerPolicy = "no-referrer-when-downgrade";
-    img.onerror = function () {
-      w.remove();
-    };
-    w.appendChild(img);
-    if (media.alt) {
-      var cap = document.createElement("figcaption");
-      cap.textContent = media.alt;
-      w.appendChild(cap);
-    }
-    messages.appendChild(w);
-    if (lastUserRow) scrollRowToTop(lastUserRow);
+    scrollMessagesToEnd(true);
   }
 
   function showTyping() {
-    var el = document.createElement("div");
-    el.className = "andes-typing";
-    el.id = "andes-typing-indicator";
-    el.innerHTML = botAv() + "<span></span><span></span><span></span>";
-    messages.appendChild(el);
-    if (lastUserRow) scrollRowToTop(lastUserRow);
-    return el;
+    var row = document.createElement("div");
+    row.className = "andes-row bot andes-typing-row";
+    row.id = "andes-typing-indicator";
+    row.setAttribute("aria-hidden", "true");
+    row.insertAdjacentHTML("afterbegin", botAv());
+    var b = document.createElement("div");
+    b.className = "andes-bubble andes-typing-bubble";
+    b.innerHTML = '<span class="andes-typing-dots"><span></span><span></span><span></span></span>';
+    row.appendChild(b);
+    messages.appendChild(row);
+    scrollMessagesToEnd(true);
+    return row;
   }
 
   function afterChatResponse(data) {
@@ -671,11 +814,13 @@
 
   function sendMessage() {
     var text = (input.value || "").trim();
-    if (!text) return;
+    if (!text || chatBusy) return;
     var now = Date.now();
     if (now - lastChatAt < 800) return;
     lastChatAt = now;
     input.value = "";
+    autoResizeInput();
+    updateSendButtonState();
     userMsgCount += 1;
     appendMsg(text, "user");
     requestChatReply(text, 0);
@@ -718,16 +863,15 @@
     b.textContent = "";
     row.appendChild(b);
     messages.appendChild(row);
-    if (lastUserRow) scrollRowToTop(lastUserRow);
-    else messages.scrollTop = 0;
+    scrollMessagesToEnd(true);
     return { row: row, bubble: b };
   }
 
   function finalizeStreamedBot(streamRow, reply) {
-    streamRow.bubble.textContent = reply;
+    setBotBubbleContent(streamRow.bubble, reply);
     chatHistory.push({ role: "assistant", content: reply });
     saveChatState();
-    if (lastUserRow) scrollRowToTop(lastUserRow);
+    scrollMessagesToEnd(true);
   }
 
   function applyChatMeta(data) {
@@ -736,7 +880,6 @@
       saveChatState();
     }
     if (data.read_more) appendReadMore(data.read_more);
-    if (data.media) appendMedia(data.media);
     afterChatResponse(data);
   }
 
@@ -752,6 +895,7 @@
         scheduleChatRetry(text, attempt);
         return;
       }
+      setChatBusy(false);
       appendMsg("Please try sending that again.", "bot");
       return;
     }
@@ -761,9 +905,12 @@
       appendMsg(data.reply, "bot");
     }
     applyChatMeta(data);
+    setChatBusy(false);
+    input.focus();
   }
 
   function requestChatReply(text, attempt) {
+    setChatBusy(true);
     if (!document.getElementById("andes-typing-indicator")) {
       showTyping();
     }
@@ -823,7 +970,7 @@
               streamRow = appendStreamingBot();
             }
             streamRow.bubble.textContent += evt.text;
-            if (lastUserRow) scrollRowToTop(lastUserRow);
+            scrollMessagesToEnd(false);
           } else if (evt.type === "done") {
             doneData = evt;
           } else if (evt.type === "error") {
@@ -854,6 +1001,7 @@
         }
         if (err && err.rateLimited) {
           removeTypingIndicator();
+          setChatBusy(false);
           appendMsg("Too many messages — please wait a moment and try again.", "bot");
           return;
         }
@@ -862,6 +1010,7 @@
           return;
         }
         removeTypingIndicator();
+        setChatBusy(false);
         appendMsg("Please try sending that again.", "bot");
       });
   }
@@ -909,6 +1058,7 @@
       .catch(function (err) {
         if (err && err.rateLimited) {
           removeTypingIndicator();
+          setChatBusy(false);
           appendMsg("Too many messages — please wait a moment and try again.", "bot");
           return;
         }
@@ -917,6 +1067,7 @@
           return;
         }
         removeTypingIndicator();
+        setChatBusy(false);
         appendMsg("Please try sending that again.", "bot");
       });
   }
@@ -944,8 +1095,8 @@
 
   function dockPanelDefault() {
     clearPanelInlineSize();
-    panel.style.right = "20px";
-    panel.style.bottom = "20px";
+    panel.style.right = "";
+    panel.style.bottom = "";
   }
 
   function pinPanelForResize() {
@@ -1039,6 +1190,8 @@
     backdrop.classList.toggle("visible", on);
     document.body.classList.toggle("andes-chat-modal-open", on);
     expandBtn.innerHTML = on ? expandOff : expandOn;
+    expandBtn.setAttribute("aria-label", on ? "Restore chat size" : "Enlarge chat");
+    expandBtn.setAttribute("aria-pressed", on ? "true" : "false");
     requestAnimationFrame(function () {
       panel.classList.remove("andes-no-transition");
     });
@@ -1048,6 +1201,7 @@
     ensureFreshChat();
     panel.classList.add("open");
     btn.classList.add("panel-open");
+    btn.setAttribute("aria-expanded", "true");
     if (!panel.dataset.pinned) {
       dockPanelDefault();
     }
@@ -1057,12 +1211,15 @@
     if (!messages.dataset.welcomed) {
       showWelcomeMessage();
     }
+    scrollMessagesToEnd(false);
   }
 
   function closePanel() {
     panel.classList.remove("open");
     setExpanded(false);
     btn.classList.remove("panel-open");
+    btn.setAttribute("aria-expanded", "false");
+    btn.focus();
   }
 
   btn.addEventListener("click", function () {
@@ -1103,9 +1260,18 @@
     e.preventDefault();
     sendMessage();
   });
+  input.addEventListener("input", function () {
+    autoResizeInput();
+    updateSendButtonState();
+  });
   input.addEventListener(
     "keydown",
     function (e) {
+      if (e.key === "Escape" && panel.classList.contains("open")) {
+        e.preventDefault();
+        closePanel();
+        return;
+      }
       if ((e.key === "Enter" || e.keyCode === 13) && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
@@ -1113,11 +1279,22 @@
     },
     true
   );
+  panel.addEventListener("keydown", trapFocusInPanel);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && panel.classList.contains("andes-expanded")) {
+      setExpanded(false);
+    }
+  });
+
+  updateSendButtonState();
+  autoResizeInput();
 
   $("andes-lead-bar-btn").addEventListener("click", toggleLeadForm);
   $("andes-lead-close").addEventListener("click", closeLeadForm);
 
-  messages.addEventListener("click", closeLeadForm);
+  messages.addEventListener("click", function (e) {
+    if (e.target === messages) closeLeadForm();
+  });
   input.addEventListener("focus", closeLeadForm);
   $("andes-lead-done").addEventListener("click", function () {
     closeLeadForm();
@@ -1145,22 +1322,30 @@
       conversation: chatHistory.slice(),
       website: honeypotValue(),
     };
-    clearEmailInvalid();
-    if (!payload.name || !payload.email) {
-      if (!payload.email) setEmailInvalid(true, "Email is required.");
-      else if (!isValidEmail(payload.email)) setEmailInvalid(true, "Please enter a valid email address.");
-      if (!payload.name) alert("Please add your name.");
-      return;
+    clearLeadFormErrors();
+    var hasError = false;
+    if (!payload.name) {
+      setFieldInvalid($("andes-lead-name"), $("andes-lead-name-error"), true, "Please enter your name.");
+      hasError = true;
+    }
+    if (!payload.email) {
+      setEmailInvalid(true, "Email is required.");
+      hasError = true;
+    } else if (!isValidEmail(payload.email)) {
+      setEmailInvalid(true, "Please enter a valid email address.");
+      hasError = true;
     }
     if (!meetDate || !meetTime) {
-      alert("Please choose a preferred date and time for your meeting.");
-      if (!meetDate) $("andes-lead-date").focus();
-      else $("andes-lead-time").focus();
-      return;
+      setFieldInvalid($("andes-lead-date"), $("andes-lead-meeting-error"), true, "Please choose a preferred date and time.");
+      setFieldInvalid($("andes-lead-time"), $("andes-lead-meeting-error"), true, "Please choose a preferred date and time.");
+      hasError = true;
     }
-    if (!isValidEmail(payload.email)) {
-      setEmailInvalid(true, "Please enter a valid email address.");
-      leadEmailInput.focus();
+    if (hasError) {
+      if (!payload.name) $("andes-lead-name").focus();
+      else if (!payload.email || !isValidEmail(payload.email)) leadEmailInput.focus();
+      else if (!meetDate) $("andes-lead-date").focus();
+      else $("andes-lead-time").focus();
+      showLeadBanner("Please complete the required fields below.", "error");
       return;
     }
     $("andes-lead-submit").disabled = true;
@@ -1186,7 +1371,7 @@
         $("andes-lead-name").value = "";
         $("andes-lead-email").value = "";
         $("andes-lead-phone").value = "";
-        clearEmailInvalid();
+        clearLeadFormErrors();
         $("andes-lead-company").value = "";
         $("andes-lead-interest").value = "";
         $("andes-lead-date").value = "";
@@ -1203,7 +1388,7 @@
           setEmailInvalid(true, "Please enter a valid email address.");
           leadEmailInput.focus();
         } else {
-          alert(msg);
+          showLeadBanner(msg, "error");
         }
       });
   });

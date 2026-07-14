@@ -8,6 +8,7 @@ from pathlib import Path
 from app.config import Settings
 from app.image_labels import ImageLabelStore
 from app.images import normalize_image_record
+from app.hybrid_search import extract_search_tokens, keyword_score_row
 from app.vector_store import RetrievedChunk, _parse_images
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "rag.db"
@@ -167,6 +168,73 @@ class LocalVectorStore:
         for chunk in out:
             chunk.images = self._enrich_images(chunk.images or [])
         return out
+
+    def search_by_page_path(self, page_path: str, max_chunks: int = 6) -> list[RetrievedChunk]:
+        path = (page_path or "").strip().rstrip("/").lower()
+        if not path or path == "/":
+            return []
+        rows = self._conn.execute(
+            """
+            select id, url, title, content, images_json, chunk_index
+            from website_chunks
+            where lower(url) like ?
+            order by chunk_index asc
+            limit ?
+            """,
+            (f"%{path}%", max_chunks * 3),
+        ).fetchall()
+        out: list[RetrievedChunk] = []
+        seen_urls: set[str] = set()
+        for row in rows:
+            url = row["url"]
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            out.append(
+                RetrievedChunk(
+                    id=row["id"],
+                    url=url,
+                    title=row["title"],
+                    content=row["content"],
+                    similarity=0.88,
+                    images=_parse_images(row["images_json"]),
+                )
+            )
+            if len(out) >= max_chunks:
+                break
+        for chunk in out:
+            chunk.images = self._enrich_images(chunk.images or [])
+        return out
+
+    def search_keywords(self, query: str, *, limit: int = 8) -> list[RetrievedChunk]:
+        tokens = extract_search_tokens(query)
+        if not tokens:
+            return []
+
+        rows = self._conn.execute(
+            "select id, url, title, content, images_json from website_chunks"
+        ).fetchall()
+        scored: list[RetrievedChunk] = []
+        for row in rows:
+            lexical = keyword_score_row(row["title"], row["content"], tokens)
+            if lexical < 2.0:
+                continue
+            sim = min(0.92, 0.44 + lexical * 0.04)
+            scored.append(
+                RetrievedChunk(
+                    id=row["id"],
+                    url=row["url"],
+                    title=row["title"],
+                    content=row["content"],
+                    similarity=sim,
+                    images=_parse_images(row["images_json"]),
+                )
+            )
+        scored.sort(key=lambda c: c.similarity, reverse=True)
+        top = scored[:limit]
+        for chunk in top:
+            chunk.images = self._enrich_images(chunk.images or [])
+        return top
 
     def search(self, query_embedding: list[float]) -> list[RetrievedChunk]:
         rows = self._conn.execute(

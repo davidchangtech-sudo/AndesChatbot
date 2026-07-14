@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -15,7 +16,25 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list, max_length=50)
     conversation_summary: str | None = Field(default=None, max_length=4000)
     user_message_count: int = Field(default=0, ge=0, le=500)
+    page_url: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Visitor page URL for page-aware retrieval (optional)",
+    )
     website: str | None = Field(default=None, max_length=200, description="Honeypot — must be empty")
+
+    @field_validator("page_url")
+    @classmethod
+    def normalize_page_url(cls, value: str | None) -> str | None:
+        if not value or not value.strip():
+            return None
+        parsed = urlparse(value.strip())
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return None
+        host = parsed.netloc.lower()
+        if "andestech.com" not in host:
+            return None
+        return value.strip()[:500]
 
     @model_validator(mode="after")
     def reject_honeypot(self) -> "ChatRequest":
@@ -29,19 +48,14 @@ class ReadMoreLink(BaseModel):
     title: str
 
 
-class MediaItem(BaseModel):
-    url: str
-    alt: str | None = None
-
-
 class ChatResponse(BaseModel):
     reply: str
     sources: list[dict] = Field(default_factory=list)
     read_more: ReadMoreLink | None = None
-    media: MediaItem | None = None
     suggest_lead_form: bool = False
     show_lead_cta: bool = False
     uncertain: bool = False
+    answer_mode: Literal["instant", "offline", "rag", "fallback", "declined", "no_kb"] = "rag"
     conversation_summary: str | None = None
 
 
